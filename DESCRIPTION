@@ -1,0 +1,25 @@
+Package: Tapestry
+Type: Package
+Title: Software for deconvoluting unphased polyclonal genotypes
+Version: 0.1.0
+Authors@R: as.person(c(
+    "Jason Hendry <j.hendry@imperial.ac.uk> [aut, cre]", 
+    "Bob Verity <r.verity@imperial.ac.uk> [aut]"
+  ))
+Description: Malaria infections often contain multiple genotypes. When
+    sequenced together, these produce a complex signal that is a mixture of the
+    individual genotypes. Like earlier programs like DEploid, Tapestry
+    attempts to pull these individual genotypes apart by exploiting allele
+    frequency imbalances within a sample. The difference in Tapestry is that we
+    assume a model of allele frequencies rather than a reference panel. We also
+    implement parallel tempered MCMC to ensure good mixing, and produce a
+    different set of outputs.
+License: GPL-3
+Encoding: UTF-8
+LazyData: true
+RoxygenNote: 7.1.1
+LinkingTo: 
+    Rcpp
+Imports: 
+    Rcpp
+SystemRequirements: C++11
