@@ -3,12 +3,12 @@
 on:
   push:
     branches:
-      - develop
+      - master
   pull_request:
     branches:
-      - develop
+      - master
 
-name: checks_develop
+name: checks_master
 
 jobs:
   R-CMD-check:
