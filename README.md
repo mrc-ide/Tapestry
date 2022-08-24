@@ -1,5 +1,6 @@
  <!-- badges: start -->
   [![checks_develop](https://github.com/mrc-ide/Tapestry/workflows/checks_develop/badge.svg)](https://github.com/mrc-ide/Tapestry/actions)
+  [![checks_master](https://github.com/mrc-ide/Tapestry/workflows/checks_master/badge.svg)](https://github.com/mrc-ide/Tapestry/actions)
   <!-- badges: end -->
 
 # Tapestry
