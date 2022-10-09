@@ -18,6 +18,7 @@ NULL
 # link to Rcpp
 #' @useDynLib Tapestry, .registration = TRUE
 #' @importFrom Rcpp sourceCpp
+#' @importFrom magrittr %>%
 NULL
 
 #------------------------------------------------

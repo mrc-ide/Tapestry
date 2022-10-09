@@ -1,5 +1,5 @@
 
-#include "misc_v14.h"
+#include "misc_v15.h"
 
 #include <math.h>
 #include <fstream>
@@ -125,7 +125,8 @@ vector<int> seq_int(int from, int to, int by) {
 
 //------------------------------------------------
 // update timer and optionally print time difference
-void chrono_timer(chrono::high_resolution_clock::time_point &t0, string message_before, bool print_diff) {
+double chrono_timer(chrono::high_resolution_clock::time_point &t0, string message_before,
+                    string message_after, bool print_diff) {
   
   // calculate elapsed time
   chrono::high_resolution_clock::time_point t1 = chrono::high_resolution_clock::now();
@@ -134,12 +135,15 @@ void chrono_timer(chrono::high_resolution_clock::time_point &t0, string message_
   
   // print time difference
   if (print_diff) {
-    message_before += to_string(time_double) + " seconds";
+    message_before += to_string(time_double) + " seconds" + message_after;
     print(message_before);
   }
   
   // update timer to current time
   t0 = t1;
+  
+  // return time diff
+  return time_double;
 }
 
 //------------------------------------------------
