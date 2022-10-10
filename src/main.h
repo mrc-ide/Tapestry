@@ -1,7 +1,11 @@
 #include <Rcpp.h>
-#include <vector>
+
+#include "misc_v15.h"
+#include "probability_v17.h"
 
 //------------------------------------------------
-// square a vector of values
+// run basic example mcmc
 // [[Rcpp::export]]
-Rcpp::List square_cpp(Rcpp::List args);
+Rcpp::List run_mcmc_cpp(Rcpp::NumericVector x, Rcpp::List args_params,
+                        Rcpp::List args_MCMC, Rcpp::List args_progress,
+                        Rcpp::List args_functions);

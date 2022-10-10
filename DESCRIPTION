@@ -6,14 +6,14 @@ Authors@R: as.person(c(
     "Jason Hendry <j.hendry@imperial.ac.uk> [aut, cre]", 
     "Bob Verity <r.verity@imperial.ac.uk> [aut]"
   ))
-Description: Malaria infections often contain multiple genotypes. When
-    sequenced together, these produce a complex signal that is a mixture of the
-    individual genotypes. Like earlier programs like DEploid, Tapestry
-    attempts to pull these individual genotypes apart by exploiting allele
-    frequency imbalances within a sample. The difference in Tapestry is that we
-    assume a model of allele frequencies rather than a reference panel. We also
-    implement parallel tempered MCMC to ensure good mixing, and produce a
-    different set of outputs.
+Description: Malaria infections often contain multiple genotypes, and when 
+    sequenced together these produce a complex signal that is a mixture of the 
+    individual genotypes. Building on the framework of earlier programs like 
+    DEploid and DEploidIBD, Tapestry attempts to pull these individual genotypes
+    apart by exploiting allele frequency imbalances within a sample, while 
+    simultaneously estimating segments of identity by descent (IBD) between 
+    sequences. Unlike previous programs, Tapestry uses advanced MCMC methods to 
+    ensure that results are robust even for high complexity of infection (COI).
 License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
@@ -21,6 +21,11 @@ RoxygenNote: 7.1.1
 LinkingTo: 
     Rcpp
 Imports: 
+    magrittr,
+    dplyr,
     Rcpp
 SystemRequirements: C++11
 BugReports: https://github.com/mrc-ide/tapestry/issues
+Suggests: 
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3

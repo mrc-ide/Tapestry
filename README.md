@@ -5,10 +5,11 @@
 
 # Tapestry
 
-Malaria infections often contain multiple genotypes. When sequenced together,
+Malaria infections often contain multiple genotypes, and when sequenced together
 these produce a complex signal that is a mixture of the individual genotypes.
-Like earlier programs like DEploid, Tapestry attempts to pull these individual
-genotypes apart by exploiting allele frequency imbalances within a sample. The
-difference in Tapestry is that we assume a model of allele frequencies rather
-than a reference panel. We also implement parallel tempered MCMC to ensure good
-mixing, and produce a different set of outputs.
+Building on the framework of earlier programs like DEploid and DEploidIBD,
+Tapestry attempts to pull these individual genotypes apart by exploiting allele
+frequency imbalances within a sample, while simultaneously estimating segments
+of identity by descent (IBD) between sequences. Unlike previous programs,
+Tapestry uses advanced MCMC methods to ensure that results are robust even for
+high complexity of infection (COI).
