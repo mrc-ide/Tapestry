@@ -41,12 +41,13 @@ public:
   // objects for storing results
   std::vector<std::vector<double>> mu_burnin;
   std::vector<double> sigma_burnin;
+  std::vector<double> w_burnin;
   std::vector<std::vector<double>> mu_sampling;
   std::vector<double> sigma_sampling;
+  std::vector<double> w_sampling;
   
   // progress bars
   Rcpp::List args_progress;
-  
   
   // PUBLIC FUNCTIONS
   

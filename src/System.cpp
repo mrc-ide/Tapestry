@@ -12,4 +12,7 @@ void System::load(Rcpp::NumericVector x, Rcpp::List args_params) {
   this->x = x;
   n_loci = x.size();
   
+  // allele frequencies
+  p = rcpp_to_vector_double(args_params["p"]);
+  
 }
