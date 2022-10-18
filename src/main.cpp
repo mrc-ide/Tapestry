@@ -23,14 +23,14 @@ Rcpp::List run_mcmc_cpp(Rcpp::NumericVector x, Rcpp::List args_params,
   // this is how you define a basic C++ object:
   int my_integer = 5;
   double my_double = 12.5;
-  bool by_logical = true;
+  bool my_logical = true;
   
   // you can define a vector like this:
   vector<int> my_vec(3, 2);   // the "3" means length 3, the "2" fills the vector with the value 2
   
   // we index the vector with square brackets and 0-index notation:
   print(my_vec[0]);
-  //print(my_vec[3]);   \\ this woud go off the end of the vector, and so would result in crash
+  //print(my_vec[3]);   // this woud go off the end of the vector, and so would result in crash
   
   // the print() function is one that I wrote, and that is loaded in from
   // misc. You can list as many print values as you want:
@@ -77,8 +77,10 @@ Rcpp::List run_mcmc_cpp(Rcpp::NumericVector x, Rcpp::List args_params,
   // return outputs in list
   Rcpp::List ret = Rcpp::List::create(Rcpp::Named("mu_burnin") = mcmc.mu_burnin,
                                       Rcpp::Named("sigma_burnin") = mcmc.sigma_burnin,
+                                      Rcpp::Named("w_burnin") = mcmc.w_burnin,
                                       Rcpp::Named("mu_sampling") = mcmc.mu_sampling,
                                       Rcpp::Named("sigma_sampling") = mcmc.sigma_sampling,
+                                      Rcpp::Named("w_sampling") = mcmc.w_sampling,
                                       Rcpp::Named("MC_accept_burnin") = mcmc.MC_accept_burnin,
                                       Rcpp::Named("MC_accept_sampling") = mcmc.MC_accept_sampling,
                                       Rcpp::Named("t_diff") = t_diff);

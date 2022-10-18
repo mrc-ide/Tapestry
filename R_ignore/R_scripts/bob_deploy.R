@@ -71,3 +71,8 @@ my_mcmc$draws %>%
   ggplot() + theme_bw() +
   geom_point(aes(x = iteration, y = sigma))
 
+# plot posterior w draws
+my_mcmc$draws %>%
+  ggplot() + theme_bw() +
+  geom_point(aes(x = iteration, y = w)) +
+  ylim(c(0, 1))

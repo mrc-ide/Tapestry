@@ -15,6 +15,9 @@ public:
   Rcpp::NumericVector x;
   int n_loci;
   
+  // allele frequencies
+  std::vector<double> p;
+  
   // PUBLIC FUNCTIONS
   
   // constructors

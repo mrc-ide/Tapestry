@@ -57,7 +57,8 @@ run_mcmc <- function(a, r, p,
   x <- a / (a + r)
   
   # make a list of model parameters
-  args_params <- list(error_0 = 0.01)
+  args_params <- list(p = p,
+                      error_0 = 0.01)
   
   # make a list of MCMC parameters
   args_MCMC <- list(burnin = burnin,
@@ -91,7 +92,8 @@ run_mcmc <- function(a, r, p,
     dplyr::mutate(phase = "burnin",
                   iteration = 1:burnin,
                   .before = 1) %>%
-    dplyr::mutate(sigma = output_raw$sigma_burnin)
+    dplyr::mutate(sigma = output_raw$sigma_burnin,
+                  w = output_raw$w_burnin)
   
   # equivalent for sampling phase
   df_sampling <- do.call(rbind, output_raw$mu_sampling) %>%
@@ -100,7 +102,8 @@ run_mcmc <- function(a, r, p,
     dplyr::mutate(phase = "sampling",
                   iteration = burnin + 1:samples,
                   .before = 1) %>%
-    dplyr::mutate(sigma = output_raw$sigma_sampling)
+    dplyr::mutate(sigma = output_raw$sigma_sampling,
+                  w = output_raw$w_sampling)
   
   # return
   ret <- list(draws = rbind(df_burnin, df_sampling),

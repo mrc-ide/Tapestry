@@ -20,6 +20,7 @@ public:
   // model parameters
   std::vector<double> mu;
   double sigma;
+  double w;
   
   // likelihood and prior
   double loglike;
@@ -34,12 +35,13 @@ public:
   void init(System &s);
   
   // likelihood and prior
-  double get_loglike(std::vector<double> mu, double sigma);
-  double get_logprior(std::vector<double> mu, double sigma);
+  double get_loglike(std::vector<double> mu, double sigma, double w);
+  double get_logprior(std::vector<double> mu, double sigma, double w);
   
   // update functions
   void update(double beta);
   void update_mu(double beta);
   void update_sigma(double beta);
+  void update_w(double beta);
   
 };

@@ -49,10 +49,13 @@ void MCMC::run_mcmc_burnin(Rcpp::Function update_progress) {
   // initialise objects for storing results
   mu_burnin = vector<vector<double>>(burnin, vector<double>(2));
   sigma_burnin = vector<double>(burnin);
+  w_burnin = vector<double>(burnin);
   
   // load initial values into store objects
-  mu_burnin[0] = particle_vec[rungs - 1].mu;
-  sigma_burnin[0] = particle_vec[rungs - 1].sigma;
+  int r_cold = rungs - 1;
+  mu_burnin[0] = particle_vec[r_cold].mu;
+  sigma_burnin[0] = particle_vec[r_cold].sigma;
+  w_burnin[0] = particle_vec[r_cold].w;
   
   // ---------- burn-in MCMC ----------
   
@@ -80,6 +83,7 @@ void MCMC::run_mcmc_burnin(Rcpp::Function update_progress) {
     int r_cold = rung_order[rungs - 1];
     mu_burnin[rep] = particle_vec[r_cold].mu;
     sigma_burnin[rep] = particle_vec[r_cold].sigma;
+    w_burnin[rep] = particle_vec[r_cold].w;
     
     // update progress bars
     if (!silent) {
@@ -97,6 +101,7 @@ void MCMC::run_mcmc_sampling(Rcpp::Function update_progress) {
   // initialise objects for storing results
   mu_sampling = vector<vector<double>>(samples, vector<double>(2));
   sigma_sampling = vector<double>(samples);
+  w_sampling = vector<double>(samples);
   
   
   // ---------- sampling MCMC ----------
@@ -122,6 +127,7 @@ void MCMC::run_mcmc_sampling(Rcpp::Function update_progress) {
     int r_cold = rung_order[rungs - 1];
     mu_sampling[rep] = particle_vec[r_cold].mu;
     sigma_sampling[rep] = particle_vec[r_cold].sigma;
+    w_sampling[rep] = particle_vec[r_cold].w;
     
     // update progress bars
     if (!silent) {
@@ -153,12 +159,15 @@ void MCMC::coupling(std::vector<double> &MC_accept) {
     // calculate acceptance ratio (still in log space)
     double acceptance = (loglike2 - loglike1)*(beta1 - beta2);
     
-    // get acceptance rate in linear space (i.e. out of log space). Truncate
-    // at 1.0 for values greater than 1.0
-    double acceptance_linear = (acceptance > 0) ? 1.0 : exp(acceptance);
-    
-    // accept or reject move
-    bool accept_move = (R::runif(0, 1) < acceptance_linear);
+    // get acceptance rate in linear space (i.e. out of log space). Truncate at
+    // 1.0 for values greater than 1.0, and draw whether to accept the move.
+    // Only do the draw if the acceptance ratio is < 1
+    double acceptance_linear = 1.0;
+    bool accept_move = true;
+    if (acceptance < 0) {
+      acceptance_linear = exp(acceptance);
+      accept_move = (R::runif(0, 1) < acceptance_linear);
+    }
     
     // update acceptance rates
     MC_accept[i] += acceptance_linear;
