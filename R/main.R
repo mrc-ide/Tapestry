@@ -21,6 +21,8 @@ check_tapestry_loaded <- function() {
 #' @param a vector of alternative allele counts.
 #' @param r vector of reference allele counts.
 #' @param p vector of allele frequencies per locus.
+#' @param c overdispersion parameter for Beta-binomial distribution. Larger
+#'   values of \code{c} give less overdispersion.
 #' @param burnin the number of burn-in iterations.
 #' @param samples the number of sampling iterations.
 #' @param beta vector of thermodynamic powers. Final value in the vector should
@@ -35,6 +37,7 @@ check_tapestry_loaded <- function() {
 #' @export
 
 run_mcmc <- function(a, r, p,
+                     c = 100,
                      burnin = 1e2,
                      samples = 1e3,
                      beta = 1,
@@ -46,6 +49,7 @@ run_mcmc <- function(a, r, p,
   assert_vector_pos_int(r)
   assert_vector_bounded(p)
   assert_same_length_multiple(a, r, p)
+  assert_single_pos(c, zero_allowed = FALSE);
   assert_single_pos_int(burnin, zero_allowed = FALSE)
   assert_single_pos_int(samples, zero_allowed = FALSE)
   assert_vector_bounded(beta)
@@ -53,12 +57,13 @@ run_mcmc <- function(a, r, p,
   assert_single_logical(pb_markdown)
   assert_single_logical(silent)
   
-  # calculate WSAFs
-  x <- a / (a + r)
+  # make a list of data inputs
+  args_data <- list(a = a,
+                    r = r)
   
   # make a list of model parameters
   args_params <- list(p = p,
-                      error_0 = 0.01)
+                      c = c)
   
   # make a list of MCMC parameters
   args_MCMC <- list(burnin = burnin,
@@ -79,7 +84,8 @@ run_mcmc <- function(a, r, p,
   # ---------- run MCMC ----------
   
   # run efficient C++ function
-  output_raw <- run_mcmc_cpp(x, args_params, args_MCMC, args_progress, args_functions)
+  output_raw <- run_mcmc_cpp(args_data, args_params, args_MCMC, args_progress,
+                             args_functions)
   
   #return(output_raw)
   

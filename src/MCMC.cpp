@@ -6,11 +6,12 @@ using namespace std;
 
 //------------------------------------------------
 // constructor
-MCMC::MCMC(Rcpp::NumericVector x, Rcpp::List args_params, Rcpp::List args_MCMC,
+MCMC::MCMC(Rcpp::List args_data, Rcpp::List args_params, Rcpp::List args_MCMC,
            Rcpp::List args_progress) {
   
-  // load data and parameters into system object
-  s.load(x, args_params);
+  // initialise system object
+  s.load(args_data, args_params);
+  s.init_betabinom_lookup();
   
   // extract MCMC parameters
   burnin = args_MCMC["burnin"];

@@ -7,7 +7,7 @@ using namespace std;
 
 //------------------------------------------------
 // run basic example mcmc
-Rcpp::List run_mcmc_cpp(Rcpp::NumericVector x, Rcpp::List args_params,
+Rcpp::List run_mcmc_cpp(Rcpp::List args_data, Rcpp::List args_params,
                         Rcpp::List args_MCMC, Rcpp::List args_progress,
                         Rcpp::List args_functions) {
   
@@ -65,7 +65,7 @@ Rcpp::List run_mcmc_cpp(Rcpp::NumericVector x, Rcpp::List args_params,
   Rcpp::Function update_progress = args_functions["update_progress"];
   
   // create MCMC object and load arguments
-  MCMC mcmc(x, args_params, args_MCMC, args_progress);
+  MCMC mcmc(args_data, args_params, args_MCMC, args_progress);
   
   // run burn-in and sampling phases of MCMC
   mcmc.run_mcmc_burnin(update_progress);

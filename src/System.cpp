@@ -6,13 +6,42 @@ using namespace std;
 
 //------------------------------------------------
 // load parameters and functions
-void System::load(Rcpp::NumericVector x, Rcpp::List args_params) {
+void System::load(Rcpp::List args_data, Rcpp::List args_params) {
   
   // data
-  this->x = x;
-  n_loci = x.size();
+  a = rcpp_to_vector_int(args_data["a"]);
+  r = rcpp_to_vector_int(args_data["r"]);
+  n_loci = a.size();
   
-  // allele frequencies
+  // other parameters
   p = rcpp_to_vector_double(args_params["p"]);
+  c = args_params["c"];
   
+}
+
+//------------------------------------------------
+// initialise Beta-binomial likelihood lookup table for each locus
+void System::init_betabinom_lookup() {
+  
+  betabinom_lookup = vector<vector<double>>(n_loci, vector<double>(1001));
+  for (int i = 0; i < n_loci; ++i) {
+    double tmp1 = lgamma(c) - lgamma(a[i] + r[i] + c);
+    for (int j = 0; j < 1001; ++j) {
+      double pi_ = j / double(1000);
+      double tmp2 = lgamma(a[i] + pi_*c) - lgamma(pi_*c);
+      double tmp3 = lgamma(r[i] + (1.0 - pi_)*c) - lgamma((1.0 - pi_)*c);
+      betabinom_lookup[i][j] = exp(tmp1 + tmp2 + tmp3);
+    }
+  }
+  
+}
+
+//------------------------------------------------
+// get Beta-binomial likelihood for locus i at WSAF pi_
+double System::get_betabinom(int i, double pi_) {
+  
+  // convert pi_ to corresponding integer index for lookup table, and return
+  // value from table
+  int index = round(pi_*1000);
+  return betabinom_lookup[i][index];
 }

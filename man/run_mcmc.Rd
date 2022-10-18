@@ -8,6 +8,7 @@ run_mcmc(
   a,
   r,
   p,
+  c = 100,
   burnin = 100,
   samples = 1000,
   beta = 1,
@@ -21,6 +22,9 @@ run_mcmc(
 \item{r}{vector of reference allele counts.}
 
 \item{p}{vector of allele frequencies per locus.}
+
+\item{c}{overdispersion parameter for Beta-binomial distribution. Larger
+values of \code{c} give less overdispersion.}
 
 \item{burnin}{the number of burn-in iterations.}
 
