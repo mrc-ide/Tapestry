@@ -12,11 +12,17 @@ public:
   // PUBLIC OBJECTS
   
   // data
-  Rcpp::NumericVector x;
+  std::vector<int> a;
+  std::vector<int> r;
   int n_loci;
   
-  // allele frequencies
+  // other parameters
   std::vector<double> p;
+  double c;
+  
+  // gamma function lookup table
+  std::vector<std::vector<double>> betabinom_lookup;
+  
   
   // PUBLIC FUNCTIONS
   
@@ -24,6 +30,8 @@ public:
   System() {};
   
   // public methods
-  void load(Rcpp::NumericVector x, Rcpp::List args_params);
+  void load(Rcpp::List args_data, Rcpp::List args_params);
+  void init_betabinom_lookup();
+  double get_betabinom(int i, double pi_);
   
 };

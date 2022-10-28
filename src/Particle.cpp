@@ -28,8 +28,8 @@ double Particle::get_loglike(vector<double> mu, double sigma, double w) {
   // calculate log-like over all data
   double ret = 0.0;
   for (int i = 0; i < s_ptr->n_loci; ++i) {
-    //s_ptr->p[i];
-    double tmp = w*R::dnorm4(s_ptr->x[i], mu[0], sigma, false) + (1 - w)*R::dnorm4(s_ptr->x[i], mu[1], sigma, false);
+    double wsaf = s_ptr->a[i] / double(s_ptr->a[i] + s_ptr->r[i]);
+    double tmp = w*R::dnorm4(wsaf, mu[0], sigma, false) + (1 - w)*R::dnorm4(wsaf, mu[1], sigma, false);
     ret += log(tmp);
   }
   

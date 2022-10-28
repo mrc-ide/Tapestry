@@ -52,7 +52,7 @@ public:
   // PUBLIC FUNCTIONS
   
   // constructors
-  MCMC(Rcpp::NumericVector x, Rcpp::List args_params, Rcpp::List args_MCMC,
+  MCMC(Rcpp::List args_data, Rcpp::List args_params, Rcpp::List args_MCMC,
        Rcpp::List args_progress);
   
   // member functions

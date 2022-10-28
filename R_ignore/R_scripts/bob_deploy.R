@@ -32,18 +32,24 @@ set.seed(1)
 
 # make up some data
 L <- 1e3
-z <- sample(c(0.3, 0.7), L, replace = TRUE)
-wsaf <- rbeta(L, shape1 = z*30, shape2 = (1 - z)*30)
-a <- round(wsaf*100)
-r <- round((1 - wsaf)*100)
-p <- rep(0.5, L)
+w <- c(0.3, 0.7)
+c <- 100
+e0 <- 0.01
+e1 <- 0.02
+
+p <- rbeta(L, 1, 1)
+q <- w[1]*rbinom(L, 1, p) + w[2]*rbinom(L, 1, p)
+pi_ <- q*(1 - e0) + (1 - q)*e1
+coverage <- rpois(L, 1e3)
+a <- rbinom(L, coverage, rbeta(L, pi_*c, (1 - pi_)*c))
+r <- coverage - a
 
 # plot what the WSAF looks like
 plot(a / (a + r), ylim = c(0, 1))
 
 # set vector of thermodynamic powers
-beta <- seq(0, 1, 0.05)^3
-#beta <- 1
+#beta <- seq(0, 1, 0.05)^3
+beta <- 1
 
 # run MCMC
 my_mcmc <- run_mcmc(a = a, r = r, p = p,

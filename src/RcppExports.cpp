@@ -11,17 +11,17 @@ Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
 // run_mcmc_cpp
-Rcpp::List run_mcmc_cpp(Rcpp::NumericVector x, Rcpp::List args_params, Rcpp::List args_MCMC, Rcpp::List args_progress, Rcpp::List args_functions);
-RcppExport SEXP _Tapestry_run_mcmc_cpp(SEXP xSEXP, SEXP args_paramsSEXP, SEXP args_MCMCSEXP, SEXP args_progressSEXP, SEXP args_functionsSEXP) {
+Rcpp::List run_mcmc_cpp(Rcpp::List args_data, Rcpp::List args_params, Rcpp::List args_MCMC, Rcpp::List args_progress, Rcpp::List args_functions);
+RcppExport SEXP _Tapestry_run_mcmc_cpp(SEXP args_dataSEXP, SEXP args_paramsSEXP, SEXP args_MCMCSEXP, SEXP args_progressSEXP, SEXP args_functionsSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type x(xSEXP);
+    Rcpp::traits::input_parameter< Rcpp::List >::type args_data(args_dataSEXP);
     Rcpp::traits::input_parameter< Rcpp::List >::type args_params(args_paramsSEXP);
     Rcpp::traits::input_parameter< Rcpp::List >::type args_MCMC(args_MCMCSEXP);
     Rcpp::traits::input_parameter< Rcpp::List >::type args_progress(args_progressSEXP);
     Rcpp::traits::input_parameter< Rcpp::List >::type args_functions(args_functionsSEXP);
-    rcpp_result_gen = Rcpp::wrap(run_mcmc_cpp(x, args_params, args_MCMC, args_progress, args_functions));
+    rcpp_result_gen = Rcpp::wrap(run_mcmc_cpp(args_data, args_params, args_MCMC, args_progress, args_functions));
     return rcpp_result_gen;
 END_RCPP
 }
