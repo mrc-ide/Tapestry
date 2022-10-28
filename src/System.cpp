@@ -25,12 +25,13 @@ void System::init_betabinom_lookup() {
   
   betabinom_lookup = vector<vector<double>>(n_loci, vector<double>(1001));
   for (int i = 0; i < n_loci; ++i) {
+    double tmp0 = lgamma(a[i] + r[i] + 1) - lgamma(a[i] + 1) - lgamma(r[i] + 1);
     double tmp1 = lgamma(c) - lgamma(a[i] + r[i] + c);
     for (int j = 0; j < 1001; ++j) {
       double pi_ = j / double(1000);
       double tmp2 = lgamma(a[i] + pi_*c) - lgamma(pi_*c);
       double tmp3 = lgamma(r[i] + (1.0 - pi_)*c) - lgamma((1.0 - pi_)*c);
-      betabinom_lookup[i][j] = exp(tmp1 + tmp2 + tmp3);
+      betabinom_lookup[i][j] = exp(tmp0 + tmp1 + tmp2 + tmp3);
     }
   }
   
