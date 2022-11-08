@@ -124,7 +124,7 @@ get_partition_from_no <- function(n, x) {
 # ------------------------------------------------------------------
 
 # length of partition sequence (equal to COI)
-n <- 8
+n <- 5
 
 # create matrix of all pairwise comparisons for indexing
 m_pairs <- cbind(rep(1:(n-1), times = (n-1):1),
@@ -160,7 +160,7 @@ for (i in 1:nrow(partition_mat)) {
 # convert to data.frame
 ret_df <- do.call(rbind, ret_list) %>%
   as.data.frame() %>%
-  set_names(c("S_from", "S_to", "coal_from", "coal_to", "param"))
+  setNames(c("S_from", "S_to", "coal_from", "coal_to", "param"))
 
 head(ret_df)
 
