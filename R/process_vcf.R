@@ -12,13 +12,15 @@ library(vcfR)
 #' @param ad_as_char; string; character representation
 #' @return ad_as_char; vector, numeric; numeric representation
 convert_ad_to_int <- function(ad_as_char) {
+  
   # Handle case where missing
   if (is.na(ad_as_char)) {
     return(NA)
   }
   
-  ads <- as.numeric(unlist(strsplit(ad_as_char, ",")))
-  return(ads)
+  ad_as_ints <- as.numeric(unlist(strsplit(ad_as_char, ",")))
+
+  return(ad_as_ints)
 }
 
 
@@ -44,7 +46,7 @@ load_sample_vcf_data <- function(vcf_path, target_sample) {
     # Load
     vcf <- read.vcfR(vcf_path)
 
-    # Chromosome and position
+    # Extract chromosome and position
     chroms <- vcf@fix[, "CHROM"]
     pos <- as.numeric(vcf@fix[, "POS"])
 
@@ -59,21 +61,20 @@ load_sample_vcf_data <- function(vcf_path, target_sample) {
     plafs <- rowSums(ads[2, , ])/rowSums(colSums(ads))
 
     # Extract sample REF and ALT
-    ref <- ads[1, , target_sample]
-    alt <- ads[2, , target_sample]
-    depth <- ref + alt
+    refs <- ads[1, , target_sample]
+    alts <- ads[2, , target_sample]
+    depth <- refs + alts
 
     # Compute WSAF
-    wsaf <- alt / (depth + 1)
+    wsafs <- alts / (depth + 1)
 
-    # Return
     return(list(
         "chroms" = chroms,
         "pos" = pos,
+        "refs" = refs,
+        "alts" = alts,
         "plafs" = plafs,
-        "ref" = ref,
-        "alt" = alt,
-        "wsaf" = wsaf
+        "wsafs" = wsafs
     ))
 }
 
