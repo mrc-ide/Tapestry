@@ -11,14 +11,30 @@ library(vcfR)
 #'
 #' @param ad_as_char; string; character representation
 #' @return ad_as_char; vector, numeric; numeric representation
-convert_ad_to_int <- function(ad_as_char) {
+convert_ad_to_int <- function(ad_as_char, n_alleles=2) {
   
-  # Handle case where missing
+  # Missing case
   if (is.na(ad_as_char)) {
     return(NA)
   }
+
+  # Not comma separated
+  if (!grepl(",", ad_as_char)) {
+    stop("Allelic depths must be comma-separated.")
+  }
   
+  # Convert to int
   ad_as_ints <- as.numeric(unlist(strsplit(ad_as_char, ",")))
+
+  # Ensure correct alleles
+  if (length(ad_as_ints) != n_alleles) {
+    stop(sprintf(
+      "Expected %d alleles, but found %d.", 
+      n_alleles,
+      length(ad_as_ints)
+      )
+    )
+  }
 
   return(ad_as_ints)
 }
