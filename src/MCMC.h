@@ -16,7 +16,7 @@ public:
   // PUBLIC OBJECTS
   
   // system object
-  System s;
+  SystemVCF& system;
   
   // MCMC parameters
   int burnin;
@@ -52,7 +52,7 @@ public:
   // PUBLIC FUNCTIONS
   
   // constructors
-  MCMC(Rcpp::NumericVector x, Rcpp::List args_params, Rcpp::List args_MCMC,
+  MCMC(SystemVCF &system, Rcpp::List args_MCMC,
        Rcpp::List args_progress);
   
   // member functions

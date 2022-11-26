@@ -16,3 +16,24 @@ void System::load(Rcpp::NumericVector x, Rcpp::List args_params) {
   p = rcpp_to_vector_double(args_params["p"]);
   
 }
+
+/**
+ * Load VCF data from as Rcpp data types into native C++ data types
+ * 
+*/
+void SystemVCF::load(
+    Rcpp::StringVector chroms,
+    Rcpp::NumericVector pos,
+    Rcpp::NumericVector refs,
+    Rcpp::NumericVector alts,
+    Rcpp::NumericVector plafs,
+    Rcpp::NumericVector wsafs) 
+{
+  this->chroms = rcpp_to_vector_string(chroms);
+  this->pos = rcpp_to_vector_int(pos);
+  this->refs = rcpp_to_vector_int(refs);
+  this->alts = rcpp_to_vector_int(alts);
+  this->plafs = rcpp_to_vector_double(plafs);
+  this->wsafs = rcpp_to_vector_double(wsafs);
+  n_loci = this->pos.size();
+}

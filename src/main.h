@@ -6,6 +6,11 @@
 //------------------------------------------------
 // run basic example mcmc
 // [[Rcpp::export]]
-Rcpp::List run_mcmc_cpp(Rcpp::NumericVector x, Rcpp::List args_params,
+Rcpp::List run_mcmc_cpp(Rcpp::StringVector chroms,
+                        Rcpp::NumericVector pos,
+                        Rcpp::NumericVector refs,
+                        Rcpp::NumericVector alts,
+                        Rcpp::NumericVector plafs,
+                        Rcpp::NumericVector wsafs,
                         Rcpp::List args_MCMC, Rcpp::List args_progress,
                         Rcpp::List args_functions);

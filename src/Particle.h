@@ -15,7 +15,7 @@ public:
   // PUBLIC OBJECTS
   
   // pointer to system object
-  System * s_ptr;
+  SystemVCF * s_ptr;
   
   // model parameters
   std::vector<double> mu;
@@ -32,7 +32,7 @@ public:
   Particle() {};
   
   // initialisers
-  void init(System &s);
+  void init(SystemVCF &system);
   
   // likelihood and prior
   double get_loglike(std::vector<double> mu, double sigma, double w);

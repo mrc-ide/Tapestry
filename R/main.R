@@ -34,31 +34,25 @@ check_tapestry_loaded <- function() {
 #' @importFrom utils txtProgressBar
 #' @export
 
-run_mcmc <- function(a, r, p,
-                     burnin = 1e2,
-                     samples = 1e3,
-                     beta = 1,
-                     pb_markdown = FALSE,
-                     silent = FALSE) {
+run_mcmc <- function(
+                    sample_data,
+                    burnin = 1e2,
+                    samples = 1e3,
+                    beta = 1,
+                    pb_markdown = FALSE,
+                    silent = FALSE) {
   
   # check inputs
-  assert_vector_pos_int(a)
-  assert_vector_pos_int(r)
-  assert_vector_bounded(p)
-  assert_same_length_multiple(a, r, p)
+  assert_vector_pos_int(sample_data[["alts"]])
+  assert_vector_pos_int(sample_data[["refs"]])
+  assert_vector_bounded(sample_data[["plafs"]])
+  #assert_same_length_multiple(a, r, p)
   assert_single_pos_int(burnin, zero_allowed = FALSE)
   assert_single_pos_int(samples, zero_allowed = FALSE)
   assert_vector_bounded(beta)
   #assert_eq(beta[length(beta)], 1)
   assert_single_logical(pb_markdown)
   assert_single_logical(silent)
-  
-  # calculate WSAFs
-  x <- a / (a + r)
-  
-  # make a list of model parameters
-  args_params <- list(p = p,
-                      error_0 = 0.01)
   
   # make a list of MCMC parameters
   args_MCMC <- list(burnin = burnin,
@@ -79,10 +73,21 @@ run_mcmc <- function(a, r, p,
   # ---------- run MCMC ----------
   
   # run efficient C++ function
-  output_raw <- run_mcmc_cpp(x, args_params, args_MCMC, args_progress, args_functions)
+  output_raw <- run_mcmc_cpp(
+    chroms=sample_data[["chroms"]],
+    pos=sample_data[["pos"]],
+    refs=sample_data[["refs"]],
+    alts=sample_data[["alts"]],
+    plafs=sample_data[["plafs"]],
+    wsafs=sample_data[["wsafs"]],
+    args_MCMC=args_MCMC,
+    args_progress=args_progress,
+    args_functions=args_functions
+  )
   
   #return(output_raw)
-  
+
+
   # ---------- process output ----------
   
   # get parameters draws from burn-in phase into data.frame

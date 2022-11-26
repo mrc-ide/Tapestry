@@ -5,10 +5,10 @@ using namespace std;
 
 //------------------------------------------------
 // initialise/reset particle
-void Particle::init(System &s) {
+void Particle::init(SystemVCF &system) {
   
   // pointer to system object
-  s_ptr = &s;
+  s_ptr = &system; // I think it is already a pointer?
   
   // initialise model parameters
   mu = {0.1, 0.9};
@@ -29,7 +29,7 @@ double Particle::get_loglike(vector<double> mu, double sigma, double w) {
   double ret = 0.0;
   for (int i = 0; i < s_ptr->n_loci; ++i) {
     //s_ptr->p[i];
-    double tmp = w*R::dnorm4(s_ptr->x[i], mu[0], sigma, false) + (1 - w)*R::dnorm4(s_ptr->x[i], mu[1], sigma, false);
+    double tmp = w*R::dnorm4(s_ptr->wsafs[i], mu[0], sigma, false) + (1 - w)*R::dnorm4(s_ptr->wsafs[i], mu[1], sigma, false);
     ret += log(tmp);
   }
   

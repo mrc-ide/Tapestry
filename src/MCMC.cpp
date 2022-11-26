@@ -1,16 +1,28 @@
-
 #include "MCMC.h"
 //#include "Particle.h"
 
 using namespace std;
 
+
+/**
+ * Oustanding questions:
+ * - Passing the system object instead of instantiating will reduce coupling
+ *  - If you change System, you do *not* need to change MCMC
+ * - However, we want to make sure we are passing by reference; i.e. no
+ * memory copying
+ * - I am not 100% sure I am doing that correctly
+*/
+
+
 //------------------------------------------------
 // constructor
-MCMC::MCMC(Rcpp::NumericVector x, Rcpp::List args_params, Rcpp::List args_MCMC,
-           Rcpp::List args_progress) {
+MCMC::MCMC(SystemVCF &system, Rcpp::List args_MCMC, Rcpp::List args_progress)
+  : system(system)
+{
   
-  // load data and parameters into system object
-  s.load(x, args_params);
+  // // load data and parameters into system object
+  // // s.load(x, args_params);
+  // this->system = system;
   
   // extract MCMC parameters
   burnin = args_MCMC["burnin"];
@@ -43,7 +55,7 @@ void MCMC::run_mcmc_burnin(Rcpp::Function update_progress) {
   // initialise particles
   particle_vec = vector<Particle>(rungs);
   for (int r = 0; r < rungs; ++r) {
-    particle_vec[r].init(s);
+    particle_vec[r].init(system);
   }
   
   // initialise objects for storing results
