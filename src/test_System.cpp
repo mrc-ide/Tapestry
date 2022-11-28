@@ -13,6 +13,6 @@ context("Test loading of VCF data into System") {
     test_that("Addition") {
         int a = 1;
         int b = 2;
-        expect_equal(a + b == 3);
+        expect_true(a + b == 3);
     }
 }
