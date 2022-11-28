@@ -8,7 +8,11 @@ using namespace std;
 
 //------------------------------------------------
 // run basic example mcmc
-Rcpp::List run_mcmc_cpp(Rcpp::StringVector chroms,
+Rcpp::List run_mcmc_cpp(int K,
+                        double e_0,
+                        double e_1,
+                        double v,
+                        Rcpp::StringVector chroms,
                         Rcpp::NumericVector pos,
                         Rcpp::NumericVector refs,
                         Rcpp::NumericVector alts,
@@ -25,8 +29,18 @@ Rcpp::List run_mcmc_cpp(Rcpp::StringVector chroms,
   Rcpp::Function update_progress = args_functions["update_progress"];
 
   // instantiate system
+  cout << "Building system..." << endl;
   SystemVCF system;
   system.load(chroms, pos, refs, alts, plafs, wsafs);
+  system.set_parameters(K, e_0, e_1, v);
+  cout << "Data:" << endl;
+  cout << "  No. loci: " << system.n_loci << endl;
+  cout << "Parameters:" << endl;
+  cout << "  COI: " << system.K << endl;
+  cout << "  e_0: " << system.e_0 << endl;
+  cout << "  e_1: " << system.e_1 << endl;
+  cout << "  v: " << system.v << endl;
+  cout << "Done." << endl;
 
   // create MCMC object and load arguments
   MCMC mcmc(system, args_MCMC, args_progress);

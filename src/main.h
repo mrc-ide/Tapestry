@@ -6,7 +6,11 @@
 //------------------------------------------------
 // run basic example mcmc
 // [[Rcpp::export]]
-Rcpp::List run_mcmc_cpp(Rcpp::StringVector chroms,
+Rcpp::List run_mcmc_cpp(int K,
+                        double e_0,
+                        double e_1,
+                        double v,
+                        Rcpp::StringVector chroms,
                         Rcpp::NumericVector pos,
                         Rcpp::NumericVector refs,
                         Rcpp::NumericVector alts,

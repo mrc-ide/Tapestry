@@ -39,6 +39,10 @@ run_mcmc <- function(
                     burnin = 1e2,
                     samples = 1e3,
                     beta = 1,
+                    K = 2,
+                    e_0 = 0.01,
+                    e_1 = 0.05,
+                    v = 500,
                     pb_markdown = FALSE,
                     silent = FALSE) {
   
@@ -74,6 +78,10 @@ run_mcmc <- function(
   
   # run efficient C++ function
   output_raw <- run_mcmc_cpp(
+    K=K,
+    e_0=e_0,
+    e_1=e_1,
+    v=v,
     chroms=sample_data[["chroms"]],
     pos=sample_data[["pos"]],
     refs=sample_data[["refs"]],
@@ -86,7 +94,6 @@ run_mcmc <- function(
   )
   
   #return(output_raw)
-
 
   # ---------- process output ----------
   
