@@ -1,7 +1,3 @@
-# Start by writing psuedo-code
-library(vcfR)
-
-
 #------------------------------------------------
 #' @title Convert string AD representation to numeric
 #'
@@ -11,6 +7,7 @@ library(vcfR)
 #'
 #' @param ad_as_char; string; character representation
 #' @return ad_as_char; vector, numeric; numeric representation
+#' @importFrom vcfR extract.gt
 convert_ad_to_int <- function(ad_as_char, n_alleles=2) {
   
   # Missing case
@@ -56,11 +53,12 @@ convert_ad_to_int <- function(ad_as_char, n_alleles=2) {
 #' @return _; list; VCF data required to run Tapestry, including
 #' for every SNP, the chromosome, position, REF read counts, ALT read counts
 #' and within-sample allele frequency.
+#' @importFrom vcfR read.vcfR
 #' @export
 load_sample_vcf_data <- function(vcf_path, target_sample) {
 
     # Load
-    vcf <- read.vcfR(vcf_path)
+    vcf <- vcfR::read.vcfR(vcf_path)
 
     # Extract chromosome and position
     chroms <- vcf@fix[, "CHROM"]
@@ -70,7 +68,6 @@ load_sample_vcf_data <- function(vcf_path, target_sample) {
     ads_chr <- extract.gt(vcf, element="AD")
 
     # Convert to numeric
-    # NB: vcfR's as.numeric=TRUE flag does not work
     ads <- apply(ads_chr, c(1, 2), convert_ad_to_int)
 
     # Compute PLAFs
