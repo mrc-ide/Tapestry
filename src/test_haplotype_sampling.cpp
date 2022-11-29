@@ -56,9 +56,11 @@ context("Test haplotype sampling probabilities")
     test_that("Given an IBD configuration, haplotype sampling probabilities should sum to 1.")
     {
 
+        // Error margin
+        double dbl_error = 0.000001;
+
         // A bunch of allele frequencies to try
-        //vector<double> ps = {0, 0.01, 0.1, 0.2, 0.5, 0.85, 0.97, 0.4444, 1.0};
-        vector<double> ps = {0.1, 0.25, 0.5, 0.75, 0.9};
+        vector<double> ps = {0, 0.01, 0.1, 0.2, 0.5, 0.85, 0.97, 0.4444, 1.0};
         for (double p : ps)
         {
             for (int k : Ks)
@@ -85,7 +87,11 @@ context("Test haplotype sampling probabilities")
                     {
                         total_prob += sampling_probs[i][j];
                     }
-                    expect_true(total_prob == 1.0);
+
+                    // Ensuring square error from 1 below a threshold
+                    // to avoid floating point comparison
+                    double cf_value = (total_prob - 1.0) * (total_prob - 1.0);
+                    expect_true(cf_value - 1.0 < dbl_error);
                 }
             }
         }
