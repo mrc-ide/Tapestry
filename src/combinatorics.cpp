@@ -13,27 +13,25 @@ using namespace std;
  * an element. Zero and one indicate the the element is
  * excluded or included in the given subset, respectively.
 */
-vector<vector<int>> create_powerset(int K)
+matrix_2d_int create_powerset(int K)
 {
     // Compute number of sets in powerset
     int N = std::pow(2, K);
 
     // Initialise
-    vector<vector<int>> matrix(
-        N,
-        vector<int>(K));
+    matrix_2d_int powerset{boost::extents[N][K]};
 
     // Populate
     for (int i = 0; i < N; ++i) {
         for (int j = 0; j < K; ++j) {
             int val = i / pow(2, j);
             if (val % 2) {
-                matrix[i][j] = 1;
+                powerset[i][j] = 1;
             }
         }
     }
 
-    return matrix;
+    return powerset;
 }
 
 /**

@@ -2,8 +2,11 @@
 #include <numeric>
 #include <cmath>
 #include <testthat.h>
+#include "misc_v15.h"
+#include "typedefs.hpp"
 #include "combinatorics.h"
 #include "haplotype_sampling.h"
+#include "constants.hpp"
 using namespace std;
 
 
@@ -33,23 +36,19 @@ context("Test haplotype sampling probabilities")
             // Create strain indices
             vector<int> strains(k);
             std::iota(strains.begin(), strains.end(), 0);
-
+            
             // Haplotype and IBD configurations
-            vector<vector<int>> hap_configs;
-            hap_configs = create_powerset(k);
+            matrix_2d_int hap_configs = create_powerset(k);
 
             vector<vector<vector<int>>> ibd_configs;
             ibd_configs = create_all_partitions(strains);
-
+            
             // Create haplotype sampling matrix
-            vector<vector<double>> sampling_probs;
-            sampling_probs = calc_sampling_probs(p, ibd_configs, hap_configs);
+            matrix_2d_double sampling_probs = calc_sampling_probs(p, ibd_configs, hap_configs);
 
             // Check size
-            // DO I WANT THIS ORIENNTATION?
-            // HAP CONFIGS ARE ROWS
-            expect_true(sampling_probs.size() == hap_configs.size());
-            expect_true(sampling_probs[0].size() == ibd_configs.size());
+            expect_true(sampling_probs.shape()[0] == hap_configs.shape()[0]);
+            expect_true(sampling_probs.shape()[1] == ibd_configs.size());
         }
     }
 
@@ -60,7 +59,8 @@ context("Test haplotype sampling probabilities")
         double dbl_error = 0.000001;
 
         // A bunch of allele frequencies to try
-        vector<double> ps = {0, 0.01, 0.1, 0.2, 0.5, 0.85, 0.97, 0.4444, 1.0};
+        //vector<double> ps = {0, 0.01, 0.1, 0.2, 0.5, 0.85, 0.97, 0.4444, 1.0};
+        vector<double> ps = {0, 0.001, 0.3453, 0.5, 0.75, 1.0};
         for (double p : ps)
         {
             for (int k : Ks)
@@ -70,20 +70,18 @@ context("Test haplotype sampling probabilities")
                 std::iota(strains.begin(), strains.end(), 0);
 
                 // Haplotype and IBD configurations
-                vector<vector<int>> hap_configs;
-                hap_configs = create_powerset(k);
+                matrix_2d_int hap_configs = create_powerset(k);
 
                 vector<vector<vector<int>>> ibd_configs;
                 ibd_configs = create_all_partitions(strains);
 
                 // Create haplotype sampling matrix
-                vector<vector<double>> sampling_probs;
-                sampling_probs = calc_sampling_probs(p, ibd_configs, hap_configs);
+                matrix_2d_double sampling_probs = calc_sampling_probs(p, ibd_configs, hap_configs);
 
                 for (int j = 0; j < ibd_configs.size(); ++j)
                 {
                     double total_prob = 0.0;
-                    for (int i = 0; i < hap_configs.size(); ++i)
+                    for (int i = 0; i < hap_configs.shape()[0]; ++i)
                     {
                         total_prob += sampling_probs[i][j];
                     }

@@ -1,7 +1,9 @@
 #include <vector>
-#include <numeric>
+#include <algorithm>
+#include <cassert>
+#include "typedefs.hpp"
 #include "haplotype_sampling.h"
-#include <iostream>
+#include "constants.hpp"
 using namespace std;
 
 
@@ -18,20 +20,22 @@ using namespace std;
  * @params hap_configs : all possible haplotype configurations
  * amongst the strains. 
 */
-vector<vector<double>> calc_sampling_probs(
+matrix_2d_double calc_sampling_probs(
     double p,
     vector<vector<vector<int>>> ibd_configs,
-    vector<vector<int>> hap_configs)
+    matrix_2d_int hap_configs)
 {
-    // Count nunmber of IBD and haplotypes configurations
+    // Count number of IBD and haplotypes configurations
     int n_ibd_configs = ibd_configs.size();
-    int n_hap_configs = hap_configs.size();
+    int n_hap_configs = hap_configs.shape()[0];
+    int k = hap_configs.shape()[1];
+    assert(n_ibd_configs == BELL_NUMBERS[k]);
 
     // Create sampling probability matrix for each combination
-    vector<vector<double>> sampling_probs(
-        n_hap_configs, vector<double>(
-        n_ibd_configs, 1.0)
-    );
+    matrix_2d_double sampling_probs{
+        boost::extents[n_hap_configs][n_ibd_configs]
+    };
+    fill_n(sampling_probs.data(), sampling_probs.num_elements(), 1.0);
 
     // Populate
     for (int i = 0; i < n_hap_configs; ++i) {

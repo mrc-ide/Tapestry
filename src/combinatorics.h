@@ -1,7 +1,7 @@
+#pragma once
 #include <vector>
-#include <cmath>
+#include "typedefs.hpp"
 using namespace std;
 
-vector<vector<int>> create_powerset(int K);
-
+matrix_2d_int create_powerset(int K);
 vector<vector<vector<int>>> create_all_partitions(vector<int> collection);

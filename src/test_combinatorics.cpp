@@ -3,6 +3,7 @@
 #include <cmath>
 #include <testthat.h>
 #include "combinatorics.h"
+#include "constants.hpp"
 using namespace std;
 
 
@@ -28,10 +29,10 @@ context("Binary powerset matrix")
         for (int k : Ks)
         {
             int N = std::pow(2, k);
-            vector<vector<int>> powerset = create_powerset(k);
+            matrix_2d_int powerset = create_powerset(k);
 
-            expect_true(powerset.size() == N);
-            expect_true(powerset[0].size() == k);
+            expect_true(powerset.shape()[0] == N);
+            expect_true(powerset.shape()[1] == k);
         }
     }
 
@@ -40,12 +41,12 @@ context("Binary powerset matrix")
 
         for (int k : Ks)
         {
-            vector<vector<int>> powerset = create_powerset(k);
+            matrix_2d_int powerset = create_powerset(k);
 
             int sum = 0;
-            for (int i = 0; i < powerset.size(); ++i)
+            for (int i = 0; i < powerset.shape()[0]; ++i)
             {
-                for (int j = 0; j < powerset[0].size(); ++j)
+                for (int j = 0; j < powerset.shape()[1]; ++j)
                 {
                     sum += powerset[i][j];
                 };
@@ -74,20 +75,6 @@ context("Test all possible partitions")
     vector<int> Ks(MAX_K - 1);
     std::iota(Ks.begin(), Ks.end(), 1);
 
-    // One to ten; from https://oeis.org/A000110
-    vector<int> expected_bell_numbers = {
-        1,
-        1,
-        2,
-        5,
-        15,
-        52,
-        203,
-        877,
-        4140,
-        21147,
-        115975};
-
     test_that("Test correct number of partitions, i.e. Bell(k)")
     {
         for (int k : Ks)
@@ -101,7 +88,7 @@ context("Test all possible partitions")
             partitions = create_all_partitions(collection);
 
             // Check there are a Bell number of partitions
-            expect_true(partitions.size() == expected_bell_numbers[k]);
+            expect_true(partitions.size() == BELL_NUMBERS[k]);
         }
     }
 }
