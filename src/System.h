@@ -1,91 +1,64 @@
 
 #pragma once
-
 #include <Rcpp.h>
 #include <vector>
+#include "typedefs.hpp"
+using namespace std;
 
-/**
- * Outstanding questions:
- * - When instantiating system, can I make sure the sizes of the vectors
- * are correct from the beginning (e.g. length n_loci), to ensure there
- * is no needless copying?
- */
 
-//------------------------------------------------
-// class holding all common objects that every particle needs access to
-class System
-{
 
-public:
-  // PUBLIC OBJECTS
-
-  // data
-  Rcpp::NumericVector x;
-  int n_loci;
-
-  // allele frequencies
-  std::vector<double> p;
-
-  // PUBLIC FUNCTIONS
-
-  // constructors
-  System(){};
-
-  // public methods
-  void load(Rcpp::NumericVector x, Rcpp::List args_params);
-};
-
-/**
- * Load VCF data from as Rcpp data types into native C++ data types
- *
- * At present the system holds:
- * - all relevant *data*
- * - all model hyper-parameters (not updated in MCMC)
- *    - K
- *    - e0, e1
- *    - v
- *    - rho
- * - all pre-computed arrays required for the model, including:
- *    - Haplotype sampling probabilities
- *    - Relevant beta-binomial probabilities
- *    - IBD initiation probabilities
- *    - IBD transition probability array (not scaled by distance)
- *
- */
 class SystemVCF
 {
+// private:
+//     void create_strains();
+//     void create_hap_configs();
+//     void create_ibd_configs();
+//     void create_hap_sampling_probs();
+
 public:
-  // Hyper-parameters
-  int K;
-  double e_0;
-  double e_1;
-  double v;
+  // HYPER PARAMETERS
+  int K;                                  // COI
+  double e_0, e_1;                        // Sequencing error rates
+  double v;                               // WSAF dispersion
 
-  // Data
+  // DATA
   int n_loci;
-  std::vector<std::string> chroms; // might want a map
-  std::vector<int> pos;
-  std::vector<int> refs;
-  std::vector<int> alts;
-  std::vector<double> plafs;
-  std::vector<double> wsafs;
+  vector<string> chroms;             // Chromosome names; TODO as map
+  vector<int> pos;                   // SNP positions
+  vector<int> refs;                  // Reference allele counts
+  vector<int> alts;                  // Alternative allele counts
+  vector<double> plafs;              // Population-level allele frequencies
+  vector<double> wsafs;              // Within-sample allele frequencies
 
-  // Default constructor
-  SystemVCF(){};
+  
+  // CONSTRUCTORS
+  SystemVCF(
+    int K, 
+    int n_loci,
+    Rcpp::StringVector chroms,
+    Rcpp::NumericVector pos,
+    Rcpp::NumericVector refs,
+    Rcpp::NumericVector alts,
+    Rcpp::NumericVector plafs,
+    Rcpp::NumericVector wsafs
+  );
+  SystemVCF(
+    int K, 
+    int n_loci,
+    double e_0,
+    double e_1,
+    double v,
+    Rcpp::StringVector chroms,
+    Rcpp::NumericVector pos,
+    Rcpp::NumericVector refs,
+    Rcpp::NumericVector alts,
+    Rcpp::NumericVector plafs,
+    Rcpp::NumericVector wsafs
+  );
 
-  // Set hyperparameters
-  void set_parameters(
-      int K,
-      double e_0,
-      double e_1,
-      double v);
-
-  // Load data
-  void load(
-      Rcpp::StringVector chroms,
-      Rcpp::NumericVector pos,
-      Rcpp::NumericVector refs,
-      Rcpp::NumericVector alts,
-      Rcpp::NumericVector plafs,
-      Rcpp::NumericVector wsafs);
+  // METHODS
+  void print();
 };
+
+
+

@@ -30,17 +30,8 @@ Rcpp::List run_mcmc_cpp(int K,
 
   // instantiate system
   cout << "Building system..." << endl;
-  SystemVCF system;
-  system.load(chroms, pos, refs, alts, plafs, wsafs);
-  system.set_parameters(K, e_0, e_1, v);
-  cout << "Data:" << endl;
-  cout << "  No. loci: " << system.n_loci << endl;
-  cout << "Parameters:" << endl;
-  cout << "  COI: " << system.K << endl;
-  cout << "  e_0: " << system.e_0 << endl;
-  cout << "  e_1: " << system.e_1 << endl;
-  cout << "  v: " << system.v << endl;
-  cout << "Done." << endl;
+  int n_loci = chroms.size();
+  SystemVCF system(K, n_loci, chroms, pos, refs, alts, plafs, wsafs);
 
   // create MCMC object and load arguments
   MCMC mcmc(system, args_MCMC, args_progress);
