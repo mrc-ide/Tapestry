@@ -1,8 +1,7 @@
-#pragma once
 
 
 // Bell numbers one to ten; from https://oeis.org/A000110
-extern int BELL_NUMBERS[11] = {
+int BELL_NUMBERS[11] = {
         1,
         1,
         2,
