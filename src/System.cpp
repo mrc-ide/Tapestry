@@ -96,6 +96,7 @@ void SystemVCF::precompute_arrays()
   create_strains();
   create_hap_configs();
   create_ibd_configs();
+  create_hap_sampling_probs();
 }
 
 
@@ -120,5 +121,18 @@ void SystemVCF::create_hap_configs()
 void SystemVCF::create_ibd_configs()
 {
     ibd_configs = create_all_partitions(strains);
+}
+
+
+void SystemVCF::create_hap_sampling_probs()
+{
+    // We produce one haplotype sampling array per PLAF
+    int n_plafs = plafs.size();
+    this->hap_sampling_probs.resize(boost::extents[n_plafs][hap_configs.size()][ibd_configs.size()]);
+    
+    // Compute and assign here
+    for (int i = 0; i < n_plafs; ++i) {
+        this->hap_sampling_probs[i] = calc_sampling_probs(plafs[i], ibd_configs, hap_configs);
+    }
 }
 

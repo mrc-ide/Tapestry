@@ -34,8 +34,12 @@ Rcpp::List run_mcmc_cpp(int K,
   SystemVCF system(K, n_loci, chroms, pos, refs, alts, plafs, wsafs);
   system.precompute_arrays();
   cout << "  No. strains: " << system.strains.size() << endl;
-  cout << "  No. haplotype configurations:" << system.hap_configs.shape()[0] << endl;
-  cout << "  No. IBD configurations:" << system.ibd_configs.size() << endl;
+  cout << "  No. haplotype configurations: " << system.hap_configs.shape()[0] << endl;
+  cout << "  No. IBD configurations: " << system.ibd_configs.size() << endl;
+  cout << "From haplotype sampling array:" << endl;
+  cout << "  No. PLAFs: " << system.hap_sampling_probs.shape()[0] << endl;
+  cout << "  No. haplotype configurations: " << system.hap_sampling_probs.shape()[1] << endl;
+  cout << "  No. IBD configurations: " << system.hap_sampling_probs.shape()[2] << endl;
 
   // create MCMC object and load arguments
   MCMC mcmc(system, args_MCMC, args_progress);

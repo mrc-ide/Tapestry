@@ -12,7 +12,7 @@ private:
   void create_strains();
   void create_hap_configs();
   void create_ibd_configs();
-//     void create_hap_sampling_probs();
+  void create_hap_sampling_probs();
 
 public:
   // HYPER PARAMETERS
@@ -33,6 +33,7 @@ public:
   vector<int> strains;
   matrix_2d_int hap_configs;
   vector<vector<vector<int>>> ibd_configs;
+  matrix_3d_double hap_sampling_probs;
 
   // CONSTRUCTORS
   SystemVCF(
