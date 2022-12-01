@@ -32,6 +32,10 @@ Rcpp::List run_mcmc_cpp(int K,
   cout << "Building system..." << endl;
   int n_loci = chroms.size();
   SystemVCF system(K, n_loci, chroms, pos, refs, alts, plafs, wsafs);
+  system.precompute_arrays();
+  cout << "  No. strains: " << system.strains.size() << endl;
+  cout << "  No. haplotype configurations:" << system.hap_configs.shape()[0] << endl;
+  cout << "  No. IBD configurations:" << system.ibd_configs.size() << endl;
 
   // create MCMC object and load arguments
   MCMC mcmc(system, args_MCMC, args_progress);

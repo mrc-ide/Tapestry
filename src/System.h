@@ -6,13 +6,12 @@
 using namespace std;
 
 
-
 class SystemVCF
 {
-// private:
-//     void create_strains();
-//     void create_hap_configs();
-//     void create_ibd_configs();
+private:
+  void create_strains();
+  void create_hap_configs();
+  void create_ibd_configs();
 //     void create_hap_sampling_probs();
 
 public:
@@ -30,7 +29,11 @@ public:
   vector<double> plafs;              // Population-level allele frequencies
   vector<double> wsafs;              // Within-sample allele frequencies
 
-  
+  // MODEL FEATURES
+  vector<int> strains;
+  matrix_2d_int hap_configs;
+  vector<vector<vector<int>>> ibd_configs;
+
   // CONSTRUCTORS
   SystemVCF(
     int K, 
@@ -58,7 +61,6 @@ public:
 
   // METHODS
   void print();
+  void precompute_arrays();
 };
-
-
 
