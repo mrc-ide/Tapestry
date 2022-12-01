@@ -22,8 +22,8 @@ using namespace std;
 */
 matrix_2d_double calc_sampling_probs(
     double p,
-    vector<vector<vector<int>>> ibd_configs,
-    matrix_2d_int hap_configs)
+    const vector<vector<vector<int>>>& ibd_configs,
+    const matrix_2d_int& hap_configs)
 {
     // Count number of IBD and haplotypes configurations
     int n_ibd_configs = ibd_configs.size();
@@ -42,15 +42,15 @@ matrix_2d_double calc_sampling_probs(
         for (int j = 0; j < n_ibd_configs; ++j) {
 
             // Collect IBD configuration
-            vector<vector<int>>& ibd_config = ibd_configs[j];
+            const vector<vector<int>>& ibd_config = ibd_configs[j];
 
             // Iterate over IBD groups within configuration
-            for (vector<int>& ibd : ibd_config) {
+            for (const vector<int>& ibd : ibd_config) {
 
                 // Compute number of strains and ALT alleles in IBD group  
                 int n_strains = ibd.size();
                 int n_alt = 0;
-                for (int& ix : ibd) {
+                for (const int& ix : ibd) {
                     n_alt += hap_configs[i][ix];
                 }
 
