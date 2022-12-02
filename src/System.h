@@ -1,8 +1,8 @@
-
 #pragma once
 #include <Rcpp.h>
 #include <vector>
 #include "typedefs.hpp"
+#include "betabin.hpp"
 using namespace std;
 
 
@@ -13,6 +13,7 @@ private:
   void create_hap_configs();
   void create_ibd_configs();
   void create_hap_sampling_probs();
+  void create_betabin_array();
 
 public:
   // HYPER PARAMETERS
@@ -34,6 +35,13 @@ public:
   matrix_2d_int hap_configs;
   vector<vector<vector<int>>> ibd_configs;
   matrix_3d_double hap_sampling_probs;
+  
+  // Below is quite bad
+  // TODO:
+  // - We want this to be the abstract class
+  // - We want it to be a const reference
+  // - And for the above to work, needs to be assigned at construction
+  BetabinomialArrayByHash betabin_array; 
 
   // CONSTRUCTORS
   SystemVCF(

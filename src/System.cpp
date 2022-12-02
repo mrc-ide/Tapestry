@@ -5,6 +5,7 @@
 #include "typedefs.hpp"
 #include "combinatorics.h"
 #include "haplotype_sampling.h"
+#include "betabin.hpp"
 using namespace std;
 
 
@@ -97,6 +98,7 @@ void SystemVCF::precompute_arrays()
   create_hap_configs();
   create_ibd_configs();
   create_hap_sampling_probs();
+  create_betabin_array();
 }
 
 
@@ -120,19 +122,37 @@ void SystemVCF::create_hap_configs()
 
 void SystemVCF::create_ibd_configs()
 {
-    ibd_configs = create_all_partitions(strains);
+  ibd_configs = create_all_partitions(strains);
 }
 
 
 void SystemVCF::create_hap_sampling_probs()
 {
-    // We produce one haplotype sampling array per PLAF
-    int n_plafs = plafs.size();
-    this->hap_sampling_probs.resize(boost::extents[n_plafs][hap_configs.size()][ibd_configs.size()]);
-    
-    // Compute and assign here
-    for (int i = 0; i < n_plafs; ++i) {
-        this->hap_sampling_probs[i] = calc_sampling_probs(plafs[i], ibd_configs, hap_configs);
-    }
+  // We produce one haplotype sampling array per PLAF
+  int n_plafs = plafs.size();
+  this->hap_sampling_probs.resize(boost::extents[n_plafs][hap_configs.size()][ibd_configs.size()]);
+  
+  // Compute and assign here
+  for (int i = 0; i < n_plafs; ++i) {
+      this->hap_sampling_probs[i] = calc_sampling_probs(plafs[i], ibd_configs, hap_configs);
+  }
+}
+
+
+// TODO:
+// - This is bad in a lot of ways
+// - First, I should inject
+// - Second, I don't want to instantiate and then reassign
+// - Really, this should come in at the constructor
+void SystemVCF::create_betabin_array()
+{
+  int n_pi_bins = 100;
+  BetabinomialArrayByHash bbarray(
+    n_loci, refs, alts, n_pi_bins, e_0, e_1, v
+  );
+  cout << "Computing betabinomial lookup...";
+  bbarray.compute_array();
+  // this->betabin_array = bbarray;
+  cout << " Done." << endl;
 }
 
