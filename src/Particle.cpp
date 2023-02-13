@@ -5,7 +5,7 @@ using namespace std;
 
 //------------------------------------------------
 // initialise/reset particle
-void Particle::init(SystemVCF &system) {
+void Particle::init(System &system) {
   
   // pointer to system object
   s_ptr = &system; // I think it is already a pointer?
@@ -27,9 +27,9 @@ double Particle::get_loglike(vector<double> mu, double sigma, double w) {
   
   // calculate log-like over all data
   double ret = 0.0;
-  for (int i = 0; i < s_ptr->n_loci; ++i) {
+  for (int i = 0; i < s_ptr->data.n_loci; ++i) {
     //s_ptr->p[i];
-    double tmp = w*R::dnorm4(s_ptr->wsafs[i], mu[0], sigma, false) + (1 - w)*R::dnorm4(s_ptr->wsafs[i], mu[1], sigma, false);
+    double tmp = w*R::dnorm4(s_ptr->data.wsafs[i], mu[0], sigma, false) + (1 - w)*R::dnorm4(s_ptr->data.wsafs[i], mu[1], sigma, false);
     ret += log(tmp);
   }
   

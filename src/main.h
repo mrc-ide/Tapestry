@@ -1,5 +1,4 @@
 #include <Rcpp.h>
-
 #include "misc_v15.h"
 #include "probability_v17.h"
 

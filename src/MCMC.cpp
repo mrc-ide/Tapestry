@@ -16,7 +16,7 @@ using namespace std;
 
 //------------------------------------------------
 // constructor
-MCMC::MCMC(SystemVCF &system, Rcpp::List args_MCMC, Rcpp::List args_progress)
+MCMC::MCMC(System &system, Rcpp::List args_MCMC, Rcpp::List args_progress)
   : system(system)
 {
   

@@ -10,8 +10,7 @@ Parameters::Parameters(int K)
     v(500),
     rho(10)
 {
-    print();
-}
+};
 
 
 Parameters::Parameters(int K, double e_0, double e_1, double v, double rho)
@@ -21,8 +20,7 @@ Parameters::Parameters(int K, double e_0, double e_1, double v, double rho)
     v(v),
     rho(rho)
 {
-    print();
-}
+};
 
 
 void Parameters::print()
@@ -33,5 +31,5 @@ void Parameters::print()
     cout << "  e_1: " << e_1 << endl;
     cout << "  v: " << v << endl;
     cout << "  rho: "  << rho << endl;
-}
+};
 

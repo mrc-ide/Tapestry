@@ -1,8 +1,9 @@
-
 #include <chrono>
 #include "main.h"
 #include "MCMC.h"
 #include "System.h"
+#include "data.hpp"
+#include "parameters.hpp"
 
 using namespace std;
 
@@ -28,11 +29,16 @@ Rcpp::List run_mcmc_cpp(int K,
   // extract R functions
   Rcpp::Function update_progress = args_functions["update_progress"];
 
+  // Testing instantiating parameters and data
+  int n_loci = chroms.size();
+  Data data(n_loci, chroms, pos, refs, alts, plafs, wsafs);
+  Parameters params(K, e_0, e_1, v, 10);
+
   // instantiate system
   cout << "Building system..." << endl;
-  int n_loci = chroms.size();
-  SystemVCF system(K, n_loci, chroms, pos, refs, alts, plafs, wsafs);
+  System system(data, params);
   system.precompute_arrays();
+
   cout << "  No. strains: " << system.strains.size() << endl;
   cout << "  No. haplotype configurations: " << system.hap_configs.shape()[0] << endl;
   cout << "  No. IBD configurations: " << system.ibd_configs.size() << endl;

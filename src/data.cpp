@@ -23,7 +23,6 @@ Data::Data(
     plafs(rcpp_to_vector_double(plafs)), 
     wsafs(rcpp_to_vector_double(wsafs))
 {
-    print();
 }
 
 

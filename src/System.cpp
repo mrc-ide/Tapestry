@@ -10,89 +10,27 @@ using namespace std;
 
 
 //--------------------------------------------------------------------------------
-// Public member functions
+// System : Public member functions
 //
 //--------------------------------------------------------------------------------
 
 
-SystemVCF::SystemVCF(
-    int K, 
-    int n_loci,
-    Rcpp::StringVector chroms,
-    Rcpp::NumericVector pos,
-    Rcpp::NumericVector refs,
-    Rcpp::NumericVector alts,
-    Rcpp::NumericVector plafs,
-    Rcpp::NumericVector wsafs
-  )
-    : K(K), 
-    e_0(0.01),
-    e_1(0.05),
-    v(500),
-    n_loci(n_loci), 
-    chroms(rcpp_to_vector_string(chroms)), 
-    pos(rcpp_to_vector_int(pos)), 
-    refs(rcpp_to_vector_int(refs)), 
-    alts(rcpp_to_vector_int(alts)), 
-    plafs(rcpp_to_vector_double(plafs)), 
-    wsafs(rcpp_to_vector_double(wsafs)),
-    strains(K),
-    hap_configs(boost::extents[pow(2, K)][K])
+System::System(Data& data, Parameters& params) :
+  data(data), 
+  params(params),
+  strains(params.K),
+  hap_configs(boost::extents[pow(2, params.K)][params.K])
 {
-    print();
+  print();
 }
 
-
-SystemVCF::SystemVCF(
-    int K, 
-    int n_loci,
-    double e_0,
-    double e_1,
-    double v,
-    Rcpp::StringVector chroms,
-    Rcpp::NumericVector pos,
-    Rcpp::NumericVector refs,
-    Rcpp::NumericVector alts,
-    Rcpp::NumericVector plafs,
-    Rcpp::NumericVector wsafs
-  )
-    : K(K), 
-    e_0(e_0),
-    e_1(e_1),
-    v(v),
-    n_loci(n_loci), 
-    chroms(rcpp_to_vector_string(chroms)), 
-    pos(rcpp_to_vector_int(pos)), 
-    refs(rcpp_to_vector_int(refs)), 
-    alts(rcpp_to_vector_int(alts)), 
-    plafs(rcpp_to_vector_double(plafs)), 
-    wsafs(rcpp_to_vector_double(wsafs)),
-    strains(K),
-    hap_configs(boost::extents[pow(2, K)][K])
+void System::print()
 {
-    print();
+  data.print();
+  params.print();
 }
 
-
-void SystemVCF::print()
-{
-  cout << "Data:" << endl;
-  cout << "  Chromosomes: " << chroms[0] << " ... " << chroms[n_loci - 1] << endl;
-  cout << "  Positions: " << pos[0] << " ... " << pos[n_loci - 1] << endl;
-  cout << "  REF counts: " << refs[0] << " ... " << refs[n_loci - 1] << endl;
-  cout << "  ALT counts: " << alts[0] << " ... " << alts[n_loci - 1] << endl;
-  cout << "  PLAFs: " << plafs[0] << " ... " << plafs[n_loci - 1] << endl;
-  cout << "  WSAFs " << wsafs[0] << " ... " << wsafs[n_loci - 1] << endl;
-  cout << "Parameters:" << endl;
-  cout << "  K: " << K << endl;
-  cout << "  e_0: " << e_0 << endl;
-  cout << "  e_1: " << e_1 << endl;
-  cout << "  v: " << v << endl;
-  cout << "Done." << endl;
-}
-
-
-void SystemVCF::precompute_arrays()
+void System::precompute_arrays()
 {
   create_strains();
   create_hap_configs();
@@ -108,51 +46,57 @@ void SystemVCF::precompute_arrays()
 //--------------------------------------------------------------------------------
 
 
-void SystemVCF::create_strains()
+void System::create_strains()
 {
   iota(strains.begin(), strains.end(), 0);
 }
 
 
-void SystemVCF::create_hap_configs()
+void System::create_hap_configs()
 {
-  hap_configs = create_powerset(K);
+  hap_configs = create_powerset(params.K);
 }
 
 
-void SystemVCF::create_ibd_configs()
+void System::create_ibd_configs()
 {
   ibd_configs = create_all_partitions(strains);
 }
 
 
-void SystemVCF::create_hap_sampling_probs()
+void System::create_hap_sampling_probs()
 {
   // We produce one haplotype sampling array per PLAF
-  int n_plafs = plafs.size();
+  int n_plafs = data.plafs.size();
   this->hap_sampling_probs.resize(boost::extents[n_plafs][hap_configs.size()][ibd_configs.size()]);
   
   // Compute and assign here
   for (int i = 0; i < n_plafs; ++i) {
-      this->hap_sampling_probs[i] = calc_sampling_probs(plafs[i], ibd_configs, hap_configs);
+      this->hap_sampling_probs[i] = calc_sampling_probs(data.plafs[i], ibd_configs, hap_configs);
   }
 }
-
 
 // TODO:
 // - This is bad in a lot of ways
 // - First, I should inject
 // - Second, I don't want to instantiate and then reassign
 // - Really, this should come in at the constructor
-void SystemVCF::create_betabin_array()
+void System::create_betabin_array()
 {
+
   int n_pi_bins = 100;
   BetabinomialArrayByHash bbarray(
-    n_loci, refs, alts, n_pi_bins, e_0, e_1, v
+    data.n_loci, 
+    data.refs, 
+    data.alts, 
+    n_pi_bins, 
+    params.e_0, 
+    params.e_1, 
+    params.v
   );
+
   cout << "Computing betabinomial lookup...";
   bbarray.compute_array();
   // this->betabin_array = bbarray;
   cout << " Done." << endl;
 }
-
