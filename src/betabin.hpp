@@ -5,72 +5,16 @@
 #include <utility>
 #include <unordered_map>
 #include <vector>
+#include "data.hpp"
+#include "parameters.hpp"
 #include "typedefs.hpp"
 using namespace std;
 
 
-// --------------------------------------------------------------------------------
-// Abstract base class
-// We are allowinng for multiple implementations of the betabinomial look-up
-// array.
-// --------------------------------------------------------------------------------
-
-
 class BetabinomialArray
 {
-public:
-    // DATA
-    int n_loci;
-    vector<int> refs;
-    vector<int> alts;
-
-    // PARAMETERS
-    int n_pi_bins;
-    double e_0;
-    double e_1;
-    double v;
-
-    // CONSTRUCTORS
-    BetabinomialArray();
-    BetabinomialArray(
-        int n_loci, 
-        vector<int> refs, 
-        vector<int> alts);
-    BetabinomialArray(
-        int n_loci,
-        vector<int> refs, 
-        vector<int> alts, 
-        int n_pi_bins, 
-        double e_0, 
-        double e_1, 
-        double v);
-
-    // CONCRETE METHODS
-    double operator()(int locus, double pi_val) const;
-
-    // ABSTRACT METHODS
-    virtual void compute_array(bool as_loglikelihood = true) = 0;
-
-protected:
-    // LOOKUP ARRAY
-    matrix_2d_double betabin_array;
-};
-
-
-
-// --------------------------------------------------------------------------------
-// Concrete implementations
-//
-//
-// --------------------------------------------------------------------------------
-
-
-class BetabinomialArrayByHash : public BetabinomialArray
-{
 private:
-    // TODO: 
-    // - Ensure no possible collisions here
-    // - Is it okay to define this here?
+    // Store (REF, ALT) pairs as hash
     struct pair_hash
     {
         size_t operator()(const pair<int, int> &p) const
@@ -80,23 +24,26 @@ private:
         }
     };
 
+    // Parameters
+    const Parameters& params;
+
+    // Betabinomial probability lookup matrix
+    const MatrixXd loglookup;
+
+    // Generate the matrix
+    MatrixXd static calc_loglookup_matrix(const Data& data, const Parameters& params);
+
 public:
-    // CONSTRUCTORS
-    BetabinomialArrayByHash();
-    BetabinomialArrayByHash(
-        int n_loci, 
-        vector<int> refs, 
-        vector<int> alts);
-    BetabinomialArrayByHash(
-        int n_loci,
-        vector<int> refs, 
-        vector<int> alts, 
-        int n_pi_bins, 
-        double e_0, 
-        double e_1, 
-        double v);
 
-    // METHODS
-    void compute_array(bool as_loglikelihood = true) override;
+    // Constructor
+    BetabinomialArray(const Data& data, const Parameters& params);
+
+    /*
+    * The () operator is overloaded to act like Eigen array indices, e.g.
+    * array(row_index, col_index); with an important exception:
+    * Instead of taking two integers, the column index is a double that
+    * gets rounded to the approproriate array index
+    * 
+    */
+    double operator()(int locus, double pi_val) const;
 };
-
