@@ -22,11 +22,10 @@ Data::Data(
     alts(rcpp_to_vector_int(alts)), 
     plafs(rcpp_to_vector_double(plafs)), 
     wsafs(rcpp_to_vector_double(wsafs))
-{
-}
+{}
 
 
-void Data::print()
+void Data::print() const
 {
     cout << "Data" << endl;
     cout << "  Chromosomes: " << chroms[0] << " ... " << chroms[n_loci - 1] << endl;
@@ -36,7 +35,5 @@ void Data::print()
     cout << "  PLAFs: " << plafs[0] << " ... " << plafs[n_loci - 1] << endl;
     cout << "  WSAFs " << wsafs[0] << " ... " << wsafs[n_loci - 1] << endl;
 }
-
-  
 
    

@@ -8,13 +8,13 @@ using namespace std;
 class Data
 {
 public:
-    int n_loci;
-    vector<string> chroms;
-    vector<int> pos;
-    vector<int> refs;
-    vector<int> alts;
-    vector<double> plafs;
-    vector<double> wsafs;
+    const int n_loci;
+    const vector<string> chroms;
+    const vector<int> pos;
+    const vector<int> refs;
+    const vector<int> alts;
+    const vector<double> plafs;
+    const vector<double> wsafs;
 
     Data(
         int n_loci,
@@ -26,6 +26,6 @@ public:
         Rcpp::NumericVector wsafs
     );
 
-    void print();
+    void print() const;
 };
 
