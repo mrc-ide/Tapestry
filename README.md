@@ -146,9 +146,7 @@ Outputs will be deposited in a directory `/results`. Visualise with:
 python scripts/plot_mcmc_diagnostics -c $summary_csv
 ```
 
-
-
-
+<p align="center"><img src="images/plot.parameters.SMI002-K03-B03-M00.png" width="1000"></p>
 
 ## Model
 
