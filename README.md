@@ -14,6 +14,16 @@ of identity by descent (IBD) between sequences. Unlike previous programs,
 Tapestry uses advanced MCMC methods to ensure that results are robust even for
 high complexity of infection (COI).
 
+## Table of Contents  
+- [Install](#install)  
+- [Quick usage](#quick_usage)
+- [Helper scripts](#helper_scripts)
+- [To do](#to_do)
+- [Model](#model)
+
+
+<a name="install"/>
+
 ## Install
 ### Build from source
 
@@ -67,7 +77,9 @@ set(COMPILE_TESTS ON)
 
 Repeat Step 3 and then run tests with the executable `./test_tapestry`. The testing framework is [GoogleTest](https://github.com/google/googletest).
 
-## Quickstart
+<a name="quick_usage"/>
+
+## Quick usage
 The executable `tapestry` will be in your `/build` or `/release`.
 
 ```
@@ -105,6 +117,8 @@ MCMC Parameters:
   -w,--w_proposal FLOAT:POSITIVE
                               Controls variance in proportion proposals.
 ```
+
+<a name="helper_scripts"/>
 
 ## Helper scripts
 [scripts](https://github.com/mrc-ide/Tapestry/tree/feature/likelihood/scripts) contains python scripts for:
@@ -148,6 +162,8 @@ python scripts/plot_mcmc_diagnostics -c $summary_csv
 
 <p align="center"><img src="images/plot.parameters.SMI002-K03-B03-M00.png" width="1000"></p>
 
+<a name="to_do"/>
+
 ## To do
 ### Major
 - Copying of Particle inside of ProposalEngine could become slow when large number of parameters. Can we use pointers?
@@ -161,6 +177,8 @@ You can see all minor TODO's with:
 grep -nC5 "TODO" src/*
 
 ```
+
+<a name="model"/>
 
 ## Model
 
