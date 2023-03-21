@@ -14,6 +14,141 @@ of identity by descent (IBD) between sequences. Unlike previous programs,
 Tapestry uses advanced MCMC methods to ensure that results are robust even for
 high complexity of infection (COI).
 
+## Install
+### Build from source
+
+**Step 1:** Install [HTSlib](https://github.com/samtools/htslib) dependency.
+e.g.
+```
+git clone https://github.com/samtools/htslib
+cd htslib
+autoreconf -i  # Build the configure script and install files it uses
+./configure    # Optional but recommended, for choosing extra functionality
+make
+make install
+```
+
+**Step 2:** Clone Tapestry.
+
+```
+git clone https://github.com/mrc-ide/Tapestry.git
+cd Tapestry
+```
+**Step 3:** Compile Tapestry using [CMake](https://cmake.org/).
+
+For a (slower) debugging version:
+
+```
+cd build
+cmake ..
+make .
+```
+
+For a (faster) release version:
+
+```
+mkdir release
+cd release
+cmake .. -DCMAKE_BUILD_TYPE="Release"
+make .
+```
+
+**Optional**: By default the tests are not compiled. To compile them, open [CMakeLists.txt](https://github.com/mrc-ide/Tapestry/blob/feature/likelihood/CMakeLists.txt) in a text editor, and change line 16:
+
+```
+set(COMPILE_TESTS OFF)
+```
+
+...to...
+
+```
+set(COMPILE_TESTS ON)
+```
+
+Repeat Step 3 and then run tests with the executable `./test_tapestry`. The testing framework is [GoogleTest](https://github.com/google/googletest).
+
+## Quickstart
+The executable `tapestry` will be in your `/build` or `/release`.
+
+```
+bash_prompt$ ./release/tapestry infer --help
+Run inference from an filtered VCF.
+Usage: ./release/tapestry infer [OPTIONS]
+
+Options:
+  -h,--help                   Print this help message and exit
+
+
+Input and output:
+  -i,--input_vcf TEXT:FILE REQUIRED
+                              Path to input VCF file.
+  -s,--target_sample TEXT REQUIRED
+                              Target sample in VCF.
+  -o,--output_dir TEXT        Output directory.
+
+
+Model Hyperparameters:
+  -K,--COI INT:INT in [1 - 6] Complexity of infection.
+  -e,--error_ref FLOAT:INT in [0 - 1]
+                              Probability of REF->ALT error.
+  -E,--error_alt FLOAT:INT in [0 - 1]
+                              Probability of ALT->REF error.
+  -v,--var_wsaf FLOAT:POSITIVE
+                              Controls dispersion in WSAF. Larger is less dispersed.
+  -r,--recomb_rate FLOAT:POSITIVE
+                              Recombination rate in kbp/cM.
+  -b,--n_wsaf_bins INT:INT in [100 - 10000]
+                              Number of WSAF bins in Betabin lookup table.
+
+
+MCMC Parameters:
+  -w,--w_proposal FLOAT:POSITIVE
+                              Controls variance in proportion proposals.
+```
+
+## Helper scripts
+[scripts](https://github.com/mrc-ide/Tapestry/tree/feature/likelihood/scripts) contains python scripts for:
+
+1. Quickly running Tapestry over a set of simulated *P. falciparum* infections
+2. Visualising outputs
+
+You can get help with `python scripts/<script_name> --help`:
+
+```
+bash_prompt$ python scripts/infer_multiple_samples.py --help
+Usage: infer_multiple_samples.py [OPTIONS]
+
+  Run `Tapestry` over a selection of samples
+
+Options:
+  -i, --input_vcf PATH     Path to input VCF.
+  -c, --summary_csv PATH   Path to summary CSV.
+  -n, --n_samples INTEGER  Number of samples.
+  -K, --coi INTEGER        COI to run.
+  -w, --w_proposal FLOAT   Proportion-titre proposal SD ~N(0, w).
+  -v, --var_wsaf FLOAT     Variance in WSAF.
+  --help                   Show this message and exit.
+
+```
+
+Here is an example workflow:
+
+```
+input_vcf="example_data/simulated_infections.DRCongo.K03.vcf"
+summary_csv="simulated_infections.DRCongo.K03.summary.csv"
+
+python scripts/infer_multiple_samples.py -i $input_vcf -c $summary_csv
+```
+
+Outputs will be deposited in a directory `/results`. Visualise with:
+
+```
+python scripts/plot_mcmc_diagnostics -c $summary_csv
+```
+
+
+
+
 
 ## Model
 
