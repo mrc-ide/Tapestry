@@ -39,7 +39,7 @@ int main(int argc, char* argv[])
     double e_0 = 0.01;          // REF -> ALT error probability
     double e_1 = 0.05;          // ALT -> REF error probability
     double v = 100;             // WSAF dispersion
-    double rho = 13.5;          // Recombination rate; kbp per cM
+    double rho = 13.5;         // Recombination rate; kbp per cM
     int n_pi_bins = 1000;       // No. of WSAF bins in betabinomial lookup
     
     // MCMC parameters
@@ -115,7 +115,7 @@ int main(int argc, char* argv[])
 
         // Create a Model
         cout << "Creating a model..." << endl;
-        NoIBDModel model(params, data);
+        NaiveIBDModel model(params, data);
         model.print();
 
         // Create MCMC
