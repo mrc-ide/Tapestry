@@ -11,7 +11,6 @@
 #include "timer.hpp"
 using namespace std;
 
-// Let's repeat usage of CLI
 
 int main(int argc, char* argv[])
 {
@@ -136,4 +135,3 @@ int main(int argc, char* argv[])
     cout << "Time elapsed (s): " << timer.elapsed() << endl;
     cout << "Done." << endl;
 }
-
