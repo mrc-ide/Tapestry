@@ -104,6 +104,10 @@ private:
     const vector<MatrixXd> sampling_probs;        // Prob. of IBD/allele combo given PLAF
     const BetabinomialArray betabin_lookup;
     const vector<MatrixXd> transition_matrices;
+    // Pre-allocate memory for Forward Algorithm
+    // TODO: this did not improve performance
+    // MatrixXd F;             // Forward matrix
+    // VectorXd scales;        // Scaling factors for forward matrix normalisation                                
 
     // FUNCTIONS
     vector<int> static create_strains(int K);

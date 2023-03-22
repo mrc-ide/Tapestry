@@ -149,6 +149,8 @@ NaiveIBDModel::NaiveIBDModel(const Parameters& params, const VCFData& data)
     sampling_probs(create_sampling_probs(data, allele_configs, ibd_states)),
     betabin_lookup(params, data, false),  // want linear probabilities
     transition_matrices(create_transition_matrices(params, data))
+    // F(MatrixXd::Constant(data.n_sites, BELL_NUMBERS[params.K], -1.0)),
+    // scales(VectorXd::Constant(data.n_sites, -1.0))
 {};
 
 
@@ -272,34 +274,12 @@ vector<MatrixXd> NaiveIBDModel::create_transition_matrices(
 }
 
 
-void NaiveIBDModel::print() const
-{
-    std::cout << "Strains" << std::endl;
-    for (int i=0; i<params.K; ++i) std::cout << strains[i] << "\t";
-    std::cout << endl;
-    std::cout << "Allele Configurations:" << std::endl;
-    std::cout << allele_configs << std::endl;
-    std::cout << "No. IBD States: " << ibd_states.size() << std::endl;
-    std::cout << "Sampling probabilities: " << std::endl;
-    std::cout << "First array: " << std::endl;
-    std::cout << sampling_probs[0] << std::endl;
-    std::cout << sampling_probs[data.n_sites - 1] << std::endl;
-    std::cout << "Transition matrices: " << std::endl;
-    std::cout << transition_matrices[0] << std::endl;
-    std::cout << transition_matrices[data.n_sites - 2] << std::endl;
-}
-
-
 double NaiveIBDModel::calc_logprior(const Particle& particle) const
 {
     return 0;  // Uniform
 }
 
 
-// TODO:
-// - Objects like F (forward matrix) and scaling factors should be preallocated
-//  - i.e., we make them in the constructor
-// 
 double NaiveIBDModel::calc_loglikelihood(const Particle& particle) const
 {
     // Get adjusted WSAF values based on proportions, error parameters
@@ -309,15 +289,15 @@ double NaiveIBDModel::calc_loglikelihood(const Particle& particle) const
     // Extract relevant columns of Betabinomial array
     MatrixXd wsaf_betabin_probs = betabin_lookup.subset(wsaf_adj);
 
-    // Create storage, TODO: make instance variables
-    double loglike =  0;
-    int n_states = BELL_NUMBERS[params.K];
-    MatrixXd F = MatrixXd::Constant(data.n_sites, n_states, -1.0);
+    // Create storage; have no made these class members to allocate once
+    // This was just as fast as make an instance variable..
+    MatrixXd F = MatrixXd::Constant(data.n_sites, BELL_NUMBERS[params.K], -1.0);
     VectorXd scales = VectorXd::Constant(data.n_sites, -1.0);
 
     // Initialise
+    double loglike =  0;
     int i = 0;
-    F.row(i) = RowVectorXd::Constant(n_states, 1.0/n_states);   // Initiation
+    F.row(i) = RowVectorXd::Constant(BELL_NUMBERS[params.K], 1.0/BELL_NUMBERS[params.K]);   // Initiation
     F.row(i).array() *= (wsaf_betabin_probs.row(i) * sampling_probs[i]).array(); // Emission
     scales(i) = F.row(i).sum();
     F.row(i) /= scales(i);
@@ -337,59 +317,19 @@ double NaiveIBDModel::calc_loglikelihood(const Particle& particle) const
 }
 
 
-// NaiveIBDModel TODO
-// First, we need a function to compute the probability matrix for a given distance d_ij
-// MatrixXd calc_transition_matrix_given_distance(int d_ij)
-// -- It should the following coefficient precomputed:
-//      (1) rho / G * (K choose @) ; (2) Bell(K) - 1
-// Then I have a function:
-// vector<MatrixXd> create_transition_matrices()
-// - A simple wrapper over distance vector, running above function
-
-// NEXT:
-// - Review understanding of static and inline
-
-
-// NoIBD loglikelihood
-// ----------------------------------------------
-// ArrayXd wsaf = (allele_configs.cast<double>() * particle.ws.transpose()).array();
-// ArrayXd wsaf_adj = (1 - wsaf) * params.e_0 + (1 - params.e_1) * wsaf;
-
-// MatrixXd wsaf_betabin_probs = betabin_lookup.subset(wsaf_adj);
-
-// VectorXd emission_probs(data.n_sites);
-// for (int i = 0; i < data.n_sites; ++i) {
-//     emission_probs(i) = wsaf_betabin_probs.row(i) * sampling_probs.col(i);
-// }
-
-// return emission_probs.array().log().sum(); // TODO: base?
-
-
-// Forward algorithm, linear space with rescaling
-// ----------------------------------------------
-// Prepare scaling factors
-// VectorXd scales(hmm.T);
-
-// // Initialise
-// int t = 0;
-// F.row(t) = hmm.init_matrix;
-// for (int j = 0; j < hmm.K; ++j) { // TODO: vectorise?
-//     F(t, j) *= hmm.prob_emission(j, obs(t));
-// }
-// scales(t) = F.row(t).sum();
-// F.row(t) /= scales(t);
-// loglike += log10(scales(t));
-// ++t;
-
-// // Recur
-// for (; t < hmm.T; ++t) {
-//     F.row(t) = F.row(t-1) * hmm.tran_matrix; // NB: matrix multi
-//     for (int j = 0; j < hmm.K; ++j) {
-//         F(t, j) *= hmm.prob_emission(j, obs(t));
-//     }
-//     scales(t) = F.row(t).sum();
-//     F.row(t) /= scales(t);
-    
-//     // Compute LLK
-//     loglike += log10(scales(t));
-// }
+void NaiveIBDModel::print() const
+{
+    std::cout << "Strains" << std::endl;
+    for (int i=0; i<params.K; ++i) std::cout << strains[i] << "\t";
+    std::cout << endl;
+    std::cout << "Allele Configurations:" << std::endl;
+    std::cout << allele_configs << std::endl;
+    std::cout << "No. IBD States: " << ibd_states.size() << std::endl;
+    std::cout << "Sampling probabilities: " << std::endl;
+    std::cout << "First array: " << std::endl;
+    std::cout << sampling_probs[0] << std::endl;
+    std::cout << sampling_probs[data.n_sites - 1] << std::endl;
+    std::cout << "Transition matrices: " << std::endl;
+    std::cout << transition_matrices[0] << std::endl;
+    std::cout << transition_matrices[data.n_sites - 2] << std::endl;
+}
