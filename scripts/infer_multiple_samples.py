@@ -14,8 +14,8 @@ from typing import List
 
 
 OUTPUT_DIR = "results"
-INPUT_VCF = "example_data/simulated_infections.vcf"
-SUMMARY_CSV = "example_data/simulated_infections.summary.csv"
+INPUT_VCF = "example_data/simulated_infections.DRCongo.K02.vcf"
+SUMMARY_CSV = "example_data/simulated_infections.DRCongo.K02.summary.csv"
 N_SAMPLES = 5
 
 

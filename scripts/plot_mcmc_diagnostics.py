@@ -15,7 +15,7 @@ from matplotlib.gridspec import GridSpec
 
 
 OUTPUT_DIR = "results"
-SUMMARY_CSV = "example_data/simulated_infections.summary.csv"
+SUMMARY_CSV = "example_data/simulated_infections.DRCongo.K02.summary.csv"
 
 
 # ================================================================================
