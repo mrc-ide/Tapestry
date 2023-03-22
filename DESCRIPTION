@@ -16,16 +16,5 @@ Description: Malaria infections often contain multiple genotypes, and when
     ensure that results are robust even for high complexity of infection (COI).
 License: MIT + file LICENSE
 Encoding: UTF-8
-LazyData: true
-RoxygenNote: 7.1.1
-LinkingTo: 
-    Rcpp
-Imports: 
-    magrittr,
-    dplyr,
-    Rcpp
-SystemRequirements: C++11
+SystemRequirements: C++17
 BugReports: https://github.com/mrc-ide/tapestry/issues
-Suggests: 
-    testthat (>= 3.0.0)
-Config/testthat/edition: 3
