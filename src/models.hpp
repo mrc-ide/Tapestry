@@ -103,7 +103,7 @@ private:
     const vector<vector<vector<int>>> ibd_states; // All possible IBD states
     const vector<MatrixXd> sampling_probs;        // Prob. of IBD/allele combo given PLAF
     const BetabinomialArray betabin_lookup;
-    // const MatrixXd transition_rates;
+    const vector<MatrixXd> transition_matrices;
 
     // FUNCTIONS
     vector<int> static create_strains(int K);
@@ -113,7 +113,12 @@ private:
         const VCFData& data,
         const MatrixXi& allele_configs,
         const vector<vector<vector<int>>>& ibd_states
-        );
+    );
+    MatrixXd static calc_transition_matrix(int d_ij, const Parameters& params);
+    vector<MatrixXd> static create_transition_matrices( 
+        const Parameters& params,
+        const VCFData& data
+    );
 
 public:
     NaiveIBDModel(const Parameters& params, const VCFData& data);
