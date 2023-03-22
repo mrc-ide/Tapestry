@@ -309,13 +309,31 @@ double NaiveIBDModel::calc_loglikelihood(const Particle& particle) const
     // Extract relevant columns of Betabinomial array
     MatrixXd wsaf_betabin_probs = betabin_lookup.subset(wsaf_adj);
 
+    // Create storage, TODO: make instance variables
+    double loglike =  0;
+    int n_states = BELL_NUMBERS[params.K];
+    MatrixXd F = MatrixXd::Constant(data.n_sites, n_states, -1.0);
+    VectorXd scales = VectorXd::Constant(data.n_sites, -1.0);
 
+    // Initialise
+    int i = 0;
+    F.row(i) = RowVectorXd::Constant(n_states, 1.0/n_states);   // Initiation
+    F.row(i).array() *= (wsaf_betabin_probs.row(i) * sampling_probs[i]).array(); // Emission
+    scales(i) = F.row(i).sum();
+    F.row(i) /= scales(i);
+    loglike += log(scales(i));
+    ++i;
 
+    // Iterate
+    for (; i < data.n_sites; ++i) {
+        F.row(i) = F.row(i-1) * transition_matrices[i-1];           // Transition
+        F.row(i).array() *= (wsaf_betabin_probs.row(i) * sampling_probs[i]).array(); // Emission
+        scales(i) = F.row(i).sum();
+        F.row(i) /= scales(i);
+        loglike += log(scales(i));
+    }
 
-
-
-
-    return 0; // TODO: Implement forward algorithm
+    return loglike;
 }
 
 
