@@ -2,6 +2,7 @@
 #include <string>
 #include "libs/cli11/CLI11.hpp"
 #include "data.hpp"
+#include "io.hpp"
 #include "mcmcs.hpp"
 #include "models.hpp"
 #include "parameters.hpp"
@@ -128,6 +129,22 @@ int main(int argc, char* argv[])
         cout << "Writing output..." << endl;
         ProportionParticleWriter particle_writer;
         mcmc.write_output(output_dir, particle_writer);
+
+        // Particle map_particle = proposal_engine.create_particle();
+
+        cout << "Getting MAP particle ..." << endl;
+        Particle map_particle = mcmc.get_map_particle();
+        cout << map_particle.ws << endl;
+
+        cout << "Computing Viterbi Path ..." << endl;
+        VectorXi viterbi_path = model.get_viterbi_path(map_particle);
+        std::string viterbi_csv = output_dir + "/ibd.viterbi_path.csv";
+        write_data_with_annotation(
+            viterbi_csv,
+            data,
+            viterbi_path,
+            vector<string>{"ibd_viterbi"}
+        );
 
     } else {
         // Throw an exception 
