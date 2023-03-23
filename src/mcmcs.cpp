@@ -1,4 +1,6 @@
+#include <algorithm>
 #include <iostream>
+#include <iterator>
 #include <filesystem>
 #include <fstream>
 #include <stdexcept>
@@ -69,6 +71,19 @@ void MCMC::write_output(
         particles_csv,
         particle_trace
     );
+}
+
+
+Particle MCMC::get_map_particle() const
+{
+    // NB: we exclude the burn-in
+    auto mapIter = std::max_element(
+        logposterior_trace.begin() + n_burn_iters, 
+        logposterior_trace.end()
+    );
+    int ix = std::distance(logposterior_trace.begin(), mapIter);
+    
+    return particle_trace[ix];
 }
 
 
