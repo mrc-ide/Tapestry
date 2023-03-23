@@ -1,3 +1,4 @@
+#pragma once
 #include <utility>
 #include <vector>
 #include "libs/eigen-3.4.0/Dense"
