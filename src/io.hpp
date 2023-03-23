@@ -1,9 +1,20 @@
+#pragma once
 #include <iostream>
 #include <fstream>
 #include <string>
 #include "data.hpp"
+#include "ibd.hpp"
 #include "libs/eigen-3.4.0/Dense"
+using Eigen::VectorXi;
+using Eigen::MatrixXi;
 using Eigen::MatrixBase; // Base class of all matrix types; for templating
+
+
+MatrixXi convert_ibd_state_path_to_pairwise(
+    const VectorXi& ibd_path, 
+    const IBDContainer& ibd
+);
+
 
 template<typename Derived>
 void write_data_with_annotation(
