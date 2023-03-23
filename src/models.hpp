@@ -9,7 +9,7 @@
 using Eigen::MatrixXd;
 using Eigen::MatrixXi;
 using Eigen::VectorXd;
-
+using Eigen::VectorXi;
 
 
 // ================================================================================
@@ -124,10 +124,17 @@ private:
         const VCFData& data
     );
 
+    // TODO: Could split viterbi into methods below...
+    // MatrixXi calc_traceback_matrix(const Particle& particle) const;
+    // VectorXi run_traceback(const MatrixXi& tb) const;
+
 public:
     NaiveIBDModel(const Parameters& params, const VCFData& data);
     virtual double calc_logprior(const Particle& particle) const override;
     virtual double calc_loglikelihood(const Particle& particle) const override;
     void print() const;
+
+    // IBD path inference
+    VectorXi get_viterbi_path(const Particle& particle) const;
 };
 

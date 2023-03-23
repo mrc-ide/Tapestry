@@ -13,8 +13,10 @@
 using Eigen::MatrixXd;
 using Eigen::MatrixXi;
 using Eigen::VectorXd;
+using Eigen::VectorXi;
 using Eigen::RowVectorXd;
 using Eigen::ArrayXi;
+using Eigen::ArrayXd;
 
 
 // ================================================================================
@@ -203,7 +205,7 @@ MatrixXd NaiveIBDModel::calc_transition_matrix(int d_ij, const Parameters& param
 {
     
     // For now, fix
-    int G = 20;
+    int G = 5;
 
     // Co-efficient
     static double bp_per_M = params.rho * 100 * 1000; // convert from kbp per cM
@@ -283,6 +285,8 @@ double NaiveIBDModel::calc_logprior(const Particle& particle) const
 double NaiveIBDModel::calc_loglikelihood(const Particle& particle) const
 {
     // Get adjusted WSAF values based on proportions, error parameters
+    // TODO: shouldn't allele configs just be a double?
+    // TODO: is there EVER benefit of particle being a row vector?
     ArrayXd wsaf = (allele_configs.cast<double>() * particle.ws.transpose()).array();
     ArrayXd wsaf_adj = (1 - wsaf) * params.e_0 + (1 - params.e_1) * wsaf;
 
@@ -296,24 +300,85 @@ double NaiveIBDModel::calc_loglikelihood(const Particle& particle) const
 
     // Initialise
     double loglike =  0;
-    int i = 0;
-    F.row(i) = RowVectorXd::Constant(BELL_NUMBERS[params.K], 1.0/BELL_NUMBERS[params.K]);   // Initiation
-    F.row(i).array() *= (wsaf_betabin_probs.row(i) * sampling_probs[i]).array(); // Emission
-    scales(i) = F.row(i).sum();
-    F.row(i) /= scales(i);
-    loglike += log(scales(i));
-    ++i;
+    int t = 0;
+    F.row(t) = RowVectorXd::Constant(BELL_NUMBERS[params.K], 1.0/BELL_NUMBERS[params.K]);   // Initiation
+    F.row(t).array() *= (wsaf_betabin_probs.row(t) * sampling_probs[t]).array(); // Emission
+    scales(t) = F.row(t).sum();
+    F.row(t) /= scales(t);
+    loglike += log(scales(t));
+    ++t;
 
     // Iterate
-    for (; i < data.n_sites; ++i) {
-        F.row(i) = F.row(i-1) * transition_matrices[i-1];           // Transition
-        F.row(i).array() *= (wsaf_betabin_probs.row(i) * sampling_probs[i]).array(); // Emission
-        scales(i) = F.row(i).sum();
-        F.row(i) /= scales(i);
-        loglike += log(scales(i));
+    for (; t < data.n_sites; ++t) {
+        F.row(t) = F.row(t-1) * transition_matrices[t-1];           // Transition
+        F.row(t).array() *= (wsaf_betabin_probs.row(t) * sampling_probs[t]).array(); // Emission
+        scales(t) = F.row(t).sum();
+        F.row(t) /= scales(t);
+        loglike += log(scales(t));
     }
 
     return loglike;
+}
+
+// Compute Viterbi path of IBD given proportions in a Particle
+VectorXi NaiveIBDModel::get_viterbi_path(const Particle& particle) const
+{
+    
+    cout << "Computing WSAF.." << endl;
+    // Compute error adjusted WSAF
+    ArrayXd wsaf = (allele_configs.cast<double>() * particle.ws.transpose()).array();
+    ArrayXd wsaf_adj = (1 - wsaf) * params.e_0 + (1 - params.e_1) * wsaf;
+
+    // Extract relevant columns of Betabinomial array
+    MatrixXd wsaf_betabin_probs = betabin_lookup.subset(wsaf_adj);
+
+    cout << "Test.." << endl;
+
+    // Prepare storage
+    MatrixXi TB = MatrixXi::Constant(data.n_sites, BELL_NUMBERS[params.K], -1.0);
+    VectorXi viterbi_path = VectorXi::Constant(data.n_sites, 9999);
+    // We never to matrix algebra with these, keep as arrays
+    ArrayXd V = ArrayXd::Constant(BELL_NUMBERS[params.K], 9999.0); // V(i)_{t}
+    ArrayXd Vt = ArrayXd::Constant(BELL_NUMBERS[params.K], 9999.0); // V(i)_{t+1}
+
+    cout << "Created arrays" << endl;
+    cout << V << endl;
+
+    // Initialise
+    int t = 0;
+    // NB: Very important to do double division 1.0 / BELL ; NOT 1 / BELL
+    V = ArrayXd::Constant(BELL_NUMBERS[params.K], log(1.0/BELL_NUMBERS[params.K])); 
+    V += log((wsaf_betabin_probs.row(t) * sampling_probs[t]).array());
+    ++t;
+    
+
+    // Iterate
+    ptrdiff_t i;  // argmax index
+    for (; t < data.n_sites; ++t) {
+        for (int j = 0; j < BELL_NUMBERS[params.K]; ++j) {
+            double maxV = (V + transition_matrices[t-1].col(j).array().log()).maxCoeff(&i);
+            Vt(j) = maxV + log(wsaf_betabin_probs.row(t) * sampling_probs[t].col(j));
+            TB(t, j) = i;
+        }
+        V = Vt;
+    }
+
+    // Terminate
+    double loglike = Vt.maxCoeff(&i);  // for now, not using this
+    int last_state = i;
+    cout << "Viterbi log(MAP): " << loglike << endl; 
+
+    // Traceback
+    t = data.n_sites - 1;  // should already have this value, if in same function
+    viterbi_path(t) = last_state;
+
+    // Recur
+    while (t  > 0) {
+        viterbi_path(t-1) = TB(t, viterbi_path(t));
+        --t;
+    }
+
+    return viterbi_path;
 }
 
 
