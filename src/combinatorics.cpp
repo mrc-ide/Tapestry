@@ -46,8 +46,10 @@ vector<vector<vector<int>>> create_all_partitions(vector<int> collection)
     }
 
     // A set of n + 1 elements is created recurisvely
-    int elem = collection.front();
-    collection.erase(collection.begin());
+    //int elem = collection.front();
+    //collection.erase(collection.begin());
+    int elem = collection.back();
+    collection.pop_back();
 
     vector<vector<vector<int>>> n_partitions = create_all_partitions(collection);
     vector<vector<vector<int>>> n1_partitions;
