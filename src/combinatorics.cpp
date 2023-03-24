@@ -1,4 +1,6 @@
+#include <algorithm>
 #include <vector>
+#include <utility>
 #include <cmath>
 #include <stdexcept>
 #include "combinatorics.hpp"
@@ -70,5 +72,26 @@ vector<vector<vector<int>>> create_all_partitions(vector<int> collection)
     }
 
     return n1_partitions;
+}
+
+
+vector<pair<int, int>> get_unique_pairs(vector<int> elements)
+{
+    // First, reduce to unique elements
+    sort(elements.begin(), elements.end());
+    auto it = unique(elements.begin(), elements.end());
+    elements.resize(distance(elements.begin(), it));
+
+    // Then get pairs
+    int n_pairs = elements.size() * (elements.size() - 1) / 2;
+    vector<pair<int,int>> pairs;
+    pairs.reserve(n_pairs);
+    for (int i = 0; i < elements.size(); ++i) {
+        for (int j = i + 1; j < elements.size(); ++j) {
+            pairs.emplace_back(pair<int,int>(elements[i],elements[j]));
+        }
+    }
+
+    return pairs;
 }
 

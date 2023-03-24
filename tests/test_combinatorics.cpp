@@ -80,3 +80,43 @@ TEST(PartitionTests, NumberOfPartitions) {
     }
 }
 
+
+// ================================================================================
+// Test creation of unique pairs
+//
+// ================================================================================
+
+
+TEST(UniquePairTests, ReturnEmpty) {
+    vector<vector<int>> inputs {
+        {},
+        {0},
+        {0, 0, 0},
+        {1, 1, 1, 1}
+    };
+    vector<pair<int,int>> e {};
+    for (const vector<int>& v : inputs) {
+        vector<pair<int,int>> r = get_unique_pairs(v);
+        EXPECT_TRUE(r == e);
+    }
+}
+
+
+TEST(UniquePairTests, ReturnExpectedN3) {
+    vector<vector<int>> inputs {
+        {0, 1, 2},
+        {0, 0, 1, 2},
+        {0, 1, 2, 2},
+        {2, 1, 0, 1, 1}
+    };
+    vector<pair<int,int>> e {
+        pair<int,int>(0, 1),
+        pair<int,int>(0, 2),
+        pair<int,int>(1, 2),
+    };
+    for (const vector<int>& v : inputs) {
+        vector<pair<int,int>> r = get_unique_pairs(v);
+        EXPECT_TRUE(r == e);
+    }
+}
+
