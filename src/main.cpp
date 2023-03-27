@@ -2,6 +2,7 @@
 #include <string>
 #include "libs/cli11/CLI11.hpp"
 #include "data.hpp"
+#include "ibd.hpp"
 #include "io.hpp"
 #include "mcmcs.hpp"
 #include "models.hpp"
@@ -145,6 +146,31 @@ int main(int argc, char* argv[])
             viterbi_path,
             vector<string>{"ibd_viterbi"}
         );
+
+        cout << "Try writing pairwise IBD information..." << endl;
+        std::string pairwise_csv = output_dir + "/ibd.viterbi_path.pairwise.csv";
+        IBDContainer ibd(params.K);
+        MatrixXi pairwise_matrix = convert_ibd_state_path_to_pairwise(viterbi_path, ibd);
+        vector<string> col_names;
+        for (const pair<int, int>& col_index_pair : ibd.column_index_to_pair) {
+            stringstream ss;
+            ss << "strain";
+            ss << col_index_pair.first;
+            ss << "-strain";
+            ss << col_index_pair.second;
+            string col_name = ss.str();
+            // col_name << stoi(col_index_pair.first);
+            // col_name << "-S";
+            // col_name << stoi(col_index_pair.second);
+            col_names.push_back(col_name);
+        }
+        write_data_with_annotation(
+            pairwise_csv,
+            data,
+            pairwise_matrix,
+            col_names
+        );
+
 
     } else {
         // Throw an exception 
