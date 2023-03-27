@@ -2,6 +2,7 @@
 #include "betabin.hpp"
 #include "combinatorics.hpp"
 #include "data.hpp"
+#include "ibd.hpp"
 #include "parameters.hpp"
 #include "particles.hpp"
 #include "sampling.hpp"
@@ -98,21 +99,18 @@ class NaiveIBDModel : public Model
 private:
     // MEMBERS
     // Supporting arrays, computed upon initialisation
-    const vector<int> strains;                    // Indices for within-sample strains
     const MatrixXi allele_configs;                // All possible allele configurations
-    const vector<vector<vector<int>>> ibd_states; // All possible IBD states
+    const IBDContainer ibd;                       // IBD state information
     const vector<MatrixXd> sampling_probs;        // Prob. of IBD/allele combo given PLAF
-    const BetabinomialArray betabin_lookup;
-    const vector<MatrixXd> transition_matrices;
+    const BetabinomialArray betabin_lookup;       // Precomputed WSAF ~ Betabin(...)
+    const vector<MatrixXd> transition_matrices;   // Distance-dependent HMM trans. probs.
     // Pre-allocate memory for Forward Algorithm
     // TODO: this did not improve performance
     // MatrixXd F;             // Forward matrix
     // VectorXd scales;        // Scaling factors for forward matrix normalisation                                
 
     // FUNCTIONS
-    vector<int> static create_strains(int K);
     MatrixXi static create_allele_configs(int K);
-    vector<vector<vector<int>>> static create_ibd_states(vector<int> strains);
     vector<MatrixXd> static create_sampling_probs(
         const VCFData& data,
         const MatrixXi& allele_configs,

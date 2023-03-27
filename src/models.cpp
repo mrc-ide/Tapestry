@@ -145,23 +145,14 @@ void NoIBDModel::print() const
 
 NaiveIBDModel::NaiveIBDModel(const Parameters& params, const VCFData& data)
     : Model(params, data),
-    strains(create_strains(params.K)),
     allele_configs(create_allele_configs(params.K)),
-    ibd_states(create_ibd_states(strains)),
-    sampling_probs(create_sampling_probs(data, allele_configs, ibd_states)),
+    ibd(params.K), // TODO: instantiate here, or pass? Probably cleaner to pass.
+    sampling_probs(create_sampling_probs(data, allele_configs, ibd.states)),
     betabin_lookup(params, data, false),  // want linear probabilities
     transition_matrices(create_transition_matrices(params, data))
     // F(MatrixXd::Constant(data.n_sites, BELL_NUMBERS[params.K], -1.0)),
     // scales(VectorXd::Constant(data.n_sites, -1.0))
 {};
-
-
-std::vector<int> NaiveIBDModel::create_strains(int K)
-{
-    std::vector<int> strains(K);
-    std::iota(strains.begin(), strains.end(), 0);
-    return strains;
-}
 
 
 MatrixXi NaiveIBDModel::create_allele_configs(int K)
@@ -170,15 +161,10 @@ MatrixXi NaiveIBDModel::create_allele_configs(int K)
 }
 
 
-vector<vector<vector<int>>> NaiveIBDModel::create_ibd_states(vector<int> strains)
-{
-    return create_all_partitions(strains);
-}
-
 vector<MatrixXd> NaiveIBDModel::create_sampling_probs(
         const VCFData& data,
         const MatrixXi& allele_configs,
-        const vector<vector<vector<int>>>& ibd_states
+        const vector<vector<vector<int>>>& ibd_states  // IBDTODO: we pass from new class
         )
 {
     // Initialise
@@ -240,7 +226,9 @@ vector<MatrixXd> NaiveIBDModel::create_transition_matrices(
         )
     );
 
-    // Chromosome transitions
+    // TODO: Chromosome transitions
+    // - Probably should also depend on distance to next pos;
+    // - Two processes ocurring; segregeation and recombination
     MatrixXd chrom_transition_matrix = MatrixXd::Constant(
             BELL_NUMBERS[params.K], 
             BELL_NUMBERS[params.K], 
@@ -268,6 +256,7 @@ vector<MatrixXd> NaiveIBDModel::create_transition_matrices(
         }
 
         // Otherwise, compute distannce
+        // TODO: Is this a bug? Verify correct for entering new chromosomes
         d_ij = data.pos(i+1) - data.pos(i);
         transition_matrices[i] = calc_transition_matrix(d_ij, params); // TODO: this is a copy, should use reference
     }
@@ -385,11 +374,11 @@ VectorXi NaiveIBDModel::get_viterbi_path(const Particle& particle) const
 void NaiveIBDModel::print() const
 {
     std::cout << "Strains" << std::endl;
-    for (int i=0; i<params.K; ++i) std::cout << strains[i] << "\t";
+    for (int i=0; i<params.K; ++i) std::cout << ibd.strains[i] << "\t";
     std::cout << endl;
     std::cout << "Allele Configurations:" << std::endl;
     std::cout << allele_configs << std::endl;
-    std::cout << "No. IBD States: " << ibd_states.size() << std::endl;
+    std::cout << "No. IBD States: " << ibd.states.size() << std::endl;
     std::cout << "Sampling probabilities: " << std::endl;
     std::cout << "First array: " << std::endl;
     std::cout << sampling_probs[0] << std::endl;
