@@ -20,7 +20,7 @@ import seaborn as sns
 
 
 OUTPUT_DIR = "results"
-SUMMARY_CSV = "example_data/simulated_infections.DRCongo.K02.summary.csv"
+SUMMARY_CSV = "example_data/simulated_infections.DRCongo.K04.summary.csv"
 
 
 # ================================================================================
@@ -344,6 +344,7 @@ class IBDSegmentPlotter:
         # Plot all IBD segments
         ax.plot()
         for j, (name, pair_df) in enumerate(self.pairwise_grps):
+            ax.axhline(j, lw=0.5, color='black', zorder=-10)
             for _, seg in pair_df.iterrows():
                 rect = Rectangle(
                     xy=(seg["pstart"], j - self.IBD_BAR_HEIGHT/2),
@@ -354,7 +355,6 @@ class IBDSegmentPlotter:
                     lw=0.5
                 )
                 ax.add_patch(rect)
-            ax.axhline(j, lw=0.5, color='black', zorder=-10)
             
         # Create y-axis
         self._build_y_axis(ax)
@@ -445,9 +445,6 @@ class CombinedPlotter:
 #
 # ================================================================================
 
-
-OUTPUT_DIR = "results"
-SUMMARY_CSV = "example_data/simulated_infections.DRCongo.K02.summary.csv"
 
 def main():
     """
