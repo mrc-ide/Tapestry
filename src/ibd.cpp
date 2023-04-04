@@ -157,7 +157,7 @@ std::vector<BEDRecord> get_ibd_segments(
 
     // Terminate
     if (ibd_state) {
-        end = pos(t);
+        end = pos(t-1); // As with end of chromosome.
         bed_records.push_back(BEDRecord(chrom, start, end, name));
     }
 

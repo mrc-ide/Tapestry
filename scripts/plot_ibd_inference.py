@@ -84,7 +84,7 @@ def get_ibd_segments(chroms: List[str],
         
     # Terminate
     if ibd_state:
-        end = pos[t]
+        end = pos[t-1]  # as with end of chromosome
         bed_records.append(BEDRecord(chrom, start, end, name))
         
     return pd.DataFrame(bed_records)
