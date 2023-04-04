@@ -19,7 +19,7 @@ MatrixXi convert_ibd_state_path_to_pairwise(
 template<typename Derived>
 void write_data_with_annotation(
     std::string output_csv,
-    VCFData& data,
+    const VCFData& data,
     const MatrixBase<Derived>& annotation_matrix,
     const vector<string>& annotation_columns
 )
@@ -61,7 +61,7 @@ void write_data_with_annotation(
         csv_file << data.wsafs(i) << ",";
         csv_file << data.plafs(i) << ",";
         csv_file << annotation_matrix.row(i).format(CSVFormat);
-    };
+    }
 
     csv_file.close();
 }
