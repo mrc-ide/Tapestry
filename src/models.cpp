@@ -310,7 +310,7 @@ double NaiveIBDModel::calc_loglikelihood(const Particle& particle) const
 }
 
 // Compute Viterbi path of IBD given proportions in a Particle
-VectorXi NaiveIBDModel::get_viterbi_path(const Particle& particle) const
+ViterbiResult NaiveIBDModel::get_viterbi_path(const Particle& particle) const
 {
     
     cout << "Computing WSAF.." << endl;
@@ -325,7 +325,6 @@ VectorXi NaiveIBDModel::get_viterbi_path(const Particle& particle) const
 
     // Prepare storage
     MatrixXi TB = MatrixXi::Constant(data.n_sites, BELL_NUMBERS[params.K], -1.0);
-    VectorXi viterbi_path = VectorXi::Constant(data.n_sites, 9999);
     // We never to matrix algebra with these, keep as arrays
     ArrayXd V = ArrayXd::Constant(BELL_NUMBERS[params.K], 9999.0); // V(i)_{t}
     ArrayXd Vt = ArrayXd::Constant(BELL_NUMBERS[params.K], 9999.0); // V(i)_{t+1}
@@ -353,21 +352,22 @@ VectorXi NaiveIBDModel::get_viterbi_path(const Particle& particle) const
     }
 
     // Terminate
-    double loglike = Vt.maxCoeff(&i);  // for now, not using this
+    ViterbiResult viterbi(data.n_sites);
+    viterbi.logposterior = Vt.maxCoeff(&i);  // for now, not using this
     int last_state = i;
-    cout << "Viterbi log(MAP): " << loglike << endl; 
+    cout << "Viterbi log(MAP): " << viterbi.logposterior << endl; 
 
     // Traceback
     t = data.n_sites - 1;  // should already have this value, if in same function
-    viterbi_path(t) = last_state;
+    viterbi.path(t) = last_state;
 
     // Recur
     while (t  > 0) {
-        viterbi_path(t-1) = TB(t, viterbi_path(t));
+        viterbi.path(t-1) = TB(t, viterbi.path(t));
         --t;
     }
 
-    return viterbi_path;
+    return viterbi;
 }
 
 

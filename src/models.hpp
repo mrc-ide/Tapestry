@@ -94,6 +94,22 @@ public:
 // --------------------------------------------------------------------------------
 
 
+/*
+* Capture output of the viterbi algorithm
+* TODO: where to put this?
+*/
+struct ViterbiResult
+{
+    VectorXi path;
+    double logposterior;
+    ViterbiResult() {}  // TODO: is this really necessary?
+    ViterbiResult(int n_sites)
+     : path(VectorXi::Constant(n_sites, 9999)),
+     logposterior(0)
+     {}
+};
+
+
 class NaiveIBDModel : public Model
 {
 private:
@@ -133,6 +149,6 @@ public:
     void print() const;
 
     // IBD path inference
-    VectorXi get_viterbi_path(const Particle& particle) const;
+    ViterbiResult get_viterbi_path(const Particle& particle) const;
 };
 
