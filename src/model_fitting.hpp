@@ -49,7 +49,7 @@ public:
     MatrixXi ibd_pairwise;
     vector<BEDRecord> ibd_segments;
     int n_ibd;      // Number of IBD segments
-    double f_ibd, l_ibd, n50_ibd;  // could also be for each pair, how F? Need G length
+    double total_ibd, f_ibd, l_ibd, n50_ibd;  // could also be for each pair, how F? Need G length
 
     
     // METHODS

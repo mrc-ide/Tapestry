@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cmath>
 #include <iostream>
 #include <fstream>
@@ -106,11 +107,13 @@ ModelFit::ModelFit(
     ws(ws),
     Keff(calc_effective_coi(ws)),
     has_ibd(true),
-    ibd(IBDContainer(params.K)),  // TODO: better to pass
+    ibd(params.K),  // TODO: better to pass
     ibd_states(ibd_states),
-    ibd_pairwise(convert_ibd_state_path_to_pairwise(ibd_states, ibd))
+    ibd_pairwise(convert_ibd_state_path_to_pairwise(ibd_states, ibd)),
+    n_ibd(0), total_ibd(0.0), f_ibd(0.0), l_ibd(0.0), n50_ibd(0.0)
 {
     // Get IBD segments
+    // - I could encapsulate
     vector<BEDRecord> pair_ibd_segments;
     for (int i = 0; i < ibd.column_index_to_pair.size(); ++i) {
         // Get IBD segments
@@ -129,15 +132,37 @@ ModelFit::ModelFit(
         );
     }
 
-    // IBD summary statistics
-    n_ibd = 0;
-    int total_l_ibd = 0;
-    for (const BEDRecord& ibd_segment : ibd_segments) {
-        total_l_ibd += (ibd_segment.end - ibd_segment.start);
-        n_ibd += 1;
+    // Compute IBD summary statistics
+    n_ibd = ibd_segments.size();
+    if (n_ibd == 0) {
+        return;
     }
-    l_ibd = total_l_ibd / n_ibd;
+
+    // Get a vector of lengths
+    double length;
+    vector<double> ibd_segment_lengths;
+    ibd_segment_lengths.reserve(n_ibd);
+    for (const BEDRecord& ibd_segment : ibd_segments) {
+        length = ibd_segment.end - ibd_segment.start;
+        ibd_segment_lengths.emplace_back(length);
+        total_ibd += length;
+    }
+    l_ibd = total_ibd / n_ibd;
+    int G = data.genome_length * ibd.column_index_to_pair.size();
+    f_ibd = total_ibd / G;
+
+    // N50
+    std::sort(ibd_segment_lengths.begin(), ibd_segment_lengths.end());
+    double frac_cumsum = 0;
+    for (double l : ibd_segment_lengths) {
+        frac_cumsum += l / total_ibd;
+        if (frac_cumsum > 0.5) {
+            n50_ibd = l;
+            break;
+        }
+    }
 }
+
 
 // Behaviour will vary depending on whether or not it has IBD
 void ModelFit::write_output(const string& output_dir)
@@ -150,6 +175,14 @@ void ModelFit::write_output(const string& output_dir)
     if (!has_ibd) {
         return;
     }
+    
+    string viterbi_csv = output_dir + "/fit.ibd.path.csv";
+    write_data_with_annotation(
+        viterbi_csv,
+        data,
+        ibd_states,
+        vector<string>{"ibd_viterbi"}
+    );
 
     string pairwise_csv = output_dir + "/fit.ibd.pairwise.csv";
     write_data_with_annotation(
@@ -161,5 +194,76 @@ void ModelFit::write_output(const string& output_dir)
 
     string segment_bed = output_dir + "/fit.ibd.segments.bed";
     write_bed_records(segment_bed, ibd_segments);
+
+    // TODO: Encapsulate
+    string stats_csv = output_dir + "/fit.ibd.stats.csv"; // could be json
+    ofstream csv_file(stats_csv);
+    if (!csv_file.is_open()) {
+        throw std::invalid_argument("Could not open file.");
+    }
+    csv_file << "stat, value\n";
+    csv_file << "n_ibd," << std::to_string(n_ibd) << "\n";
+    csv_file << "f_ibd," << std::to_string(f_ibd) << "\n";
+    csv_file << "l_ibd," << std::to_string(l_ibd) << "\n";
+    csv_file << "n50_ibd," << std::to_string(n50_ibd) << "\n";
+    csv_file.close();
 }
 
+
+
+
+/* Calculate the N50 value from a vector of lengths
+*  N50 is a *weighted* median, here weights are
+*  the lengths; half of the total length is in
+*  segments of < N50.
+*
+*  Pre: Lengths should be positive; we copy since
+*  we intend to sort in place. Should be at least one
+*  length.
+*  Post: 
+*/
+// double calc_n50(const VectorXi& lengths)
+// {
+
+// }
+
+// def calc_ibd_n50(ibd_state, pos, chroms, from_segs=False):
+//     """
+//     Calculate the N50 IBD Segment Length
+    
+//     N50 is a version of the median where each
+//     data-point (IBD segment) is weighted (here,
+//     by it's length). In this case, we return
+//     the shortest IBD segment such that the sum of
+//     all smaller IBD segments sums to *greater than half
+//     of the total IBD* observed.
+    
+//     This metric is robust to distributions with many
+//     small-valued data points.
+    
+//     params
+//         ibd_state: ndarray, int (n_sites/n_segments)
+//             `ibd_state` is a one-dimensional numpy
+//             array holding either the IBD segment lengths
+//             themselves (if from_segs == True); or from
+//             the IBD state at each position along the genome
+//             (if from_segs == False).
+
+//     returns
+//         N50_length: int
+//             The length of the N50 IBD segment.
+            
+//     """
+//     if not from_segs:
+//         ibd_segs = get_ibd_segments(ibd_state, pos, chroms)
+//     else:
+//         ibd_segs = ibd_state
+    
+//     if len(ibd_segs) > 0:
+//         ibd_segs.sort()
+//         total_ibd = ibd_segs.sum()
+//         cumulative_ibd_frac = (ibd_segs/float(total_ibd)).cumsum()
+//         ix = np.argmax(cumulative_ibd_frac > 0.5)
+//     else:
+//         return np.nan
+//     return ibd_segs[ix]
