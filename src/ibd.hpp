@@ -27,6 +27,7 @@ private:
     );
 
 public:
+    IBDContainer();
     IBDContainer(int K);
 
     /* Strain indices
@@ -71,6 +72,18 @@ public:
     */
     const vector<vector<int>> state_index_to_column_indices;
 };
+
+
+// ================================================================================
+// Conversion from HMM IBD states to pairwise IBD matrix
+//
+// ================================================================================
+
+
+MatrixXi convert_ibd_state_path_to_pairwise(
+    const VectorXi& ibd_path, 
+    const IBDContainer& ibd
+);
 
 
 // ================================================================================
