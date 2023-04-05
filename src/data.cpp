@@ -72,6 +72,38 @@ VCFData::VCFData(const string& vcf_path, const string& sample_name)
 
     // TODO:
     // - Check all the output arrays are sensible (i.e. in correct ranges)
+    genome_length = calc_genome_length();
+}
+
+
+int VCFData::calc_genome_length()
+{
+
+    // Initialise
+    int i = 0;
+    string chrom = chrom_names[i];
+    int chrom_start = pos(i);
+    int total_length = 0;
+    ++i;
+
+    // Iterate
+    for (; i < n_sites; ++i) {
+
+        // Continue if same chromosome
+        if (chrom_names[i] == chrom) {
+            continue;
+        }
+
+        // Else add length and update memory
+        total_length += (pos(i-1) - chrom_start);
+        chrom_start = pos(i);
+        chrom = chrom_names[i];
+    }
+
+    // Terminate
+    total_length += (pos(i-1) - chrom_start);
+
+    return total_length;
 }
 
 
