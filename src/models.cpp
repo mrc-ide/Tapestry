@@ -312,8 +312,6 @@ double NaiveIBDModel::calc_loglikelihood(const Particle& particle) const
 // Compute Viterbi path of IBD given proportions in a Particle
 ViterbiResult NaiveIBDModel::get_viterbi_path(const Particle& particle) const
 {
-    
-    cout << "Computing WSAF.." << endl;
     // Compute error adjusted WSAF
     ArrayXd wsaf = (allele_configs.cast<double>() * particle.ws.transpose()).array();
     ArrayXd wsaf_adj = (1 - wsaf) * params.e_0 + (1 - params.e_1) * wsaf;
@@ -321,16 +319,11 @@ ViterbiResult NaiveIBDModel::get_viterbi_path(const Particle& particle) const
     // Extract relevant columns of Betabinomial array
     MatrixXd wsaf_betabin_probs = betabin_lookup.subset(wsaf_adj);
 
-    cout << "Test.." << endl;
-
     // Prepare storage
     MatrixXi TB = MatrixXi::Constant(data.n_sites, BELL_NUMBERS[params.K], -1.0);
     // We never to matrix algebra with these, keep as arrays
     ArrayXd V = ArrayXd::Constant(BELL_NUMBERS[params.K], 9999.0); // V(i)_{t}
     ArrayXd Vt = ArrayXd::Constant(BELL_NUMBERS[params.K], 9999.0); // V(i)_{t+1}
-
-    cout << "Created arrays" << endl;
-    cout << V << endl;
 
     // Initialise
     int t = 0;
