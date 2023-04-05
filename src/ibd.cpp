@@ -165,7 +165,7 @@ std::vector<BEDRecord> get_ibd_segments(
                 end = pos(t-1);
                 bed_records.push_back(BEDRecord(chrom, start, end, name));
             }
-            if (ibd_states(t-1)) {
+            if (ibd_states(t)) {
                 start = pos(t);
             }
             chrom = chroms[t];
