@@ -118,22 +118,20 @@ int main(int argc, char* argv[])
         data.print();
 
         // Create a proposal engine
-        cout << "Creating a proposal engine..." << endl;
+        cout << "Creating proposal engine..." << endl;
         ProposalEngine proposal_engine(params);
 
         // Create a Model
-        cout << "Creating a model..." << endl;
+        cout << "Creating model..." << endl;
         NaiveIBDModel model(params, data);  // switch NoIBD model
-        model.print();
+        // model.print(); // for now, let's not print
 
         // Create MCMC
-        cout << "Creating an MCMC..." << endl;
+        cout << "Running MCMC..." << endl;
         MetropolisHastings mcmc(params, model, proposal_engine);
-        
-        cout << "Running..." << endl;
         mcmc.run();
         
-        cout << "Writing output..." << endl;
+        cout << "Writing MCMC outputs..." << endl;
         ProportionParticleWriter particle_writer;
         mcmc.write_output(output_dir, particle_writer);
 
@@ -158,16 +156,12 @@ int main(int argc, char* argv[])
         if (model_fit.has_ibd) {
             cout << "  No. IBD Segments: " << model_fit.n_ibd << endl;
             cout << "  Mean IBD Segment Length (kbp): " << model_fit.l_ibd/1000 << endl;
+            cout << "  N50 IBD Segment Length (kbp): " << model_fit.n50_ibd/1000 << endl;
+            cout << "  Fraction IBD: " << model_fit.f_ibd << endl;
         }
-
-
+        cout << "Writing fit outputs..." << endl;
         model_fit.write_output(output_dir);
-
-        // Particle
-        // IBDContainer ibd(params.K);
-        // MCMCPointEstimator mcmc_estimator(mcmc, data, model, ibd);
-        // mcmc_estimator.compute_point_estimate();
-        // mcmc_estimator.write_output(output_dir);
+        cout << "Done." << endl;
 
     } else {
         // Throw an exception 
