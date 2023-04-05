@@ -1,29 +1,37 @@
-#include "io.hpp"
+#include <cmath>
+#include <iostream>
+#include <fstream>
+#include <string>
+#include "data.hpp"
 #include "ibd.hpp"
+#include "io.hpp"
 #include "libs/eigen-3.4.0/Dense"
-using Eigen::VectorXi;
-using Eigen::MatrixXi;
+using Eigen::VectorXd;
 
-
-MatrixXi convert_ibd_state_path_to_pairwise(
-    const VectorXi& ibd_path, 
-    const IBDContainer& ibd
-)
+/* Write a single set of proportions to a CSV
+*  Pre: `prop_csv` should exist; `ws` should sum to 1.
+*  Post: A CSV is written to `prop_csv`.
+*/
+void write_proportions(const string& output_csv, const VectorXd ws, double epsilon)
 {
-    // Define size
-    int n_sites = ibd_path.rows();
-    int n_pairs = ibd.column_index_to_pair.size();
-
-    // Initialise with zeros
-    MatrixXi m = MatrixXi::Constant(n_sites, n_pairs, 0);
-
-    // Iterate along vector and populate
-    vector<int> indices;
-    for (int i = 0; i < n_sites; ++i) {
-        indices = ibd.state_index_to_column_indices[ibd_path[i]];
-        m(i, indices) = VectorXi::Constant(indices.size(), 1);
+    
+    // Check we are writing something that looks like proportions
+    if (fabs(ws.sum() - 1.0) > epsilon) {
+        throw std::invalid_argument("Proportions do not sum to 1.");
+    }
+    
+    // Create file, check open
+    ofstream csv_file(output_csv);
+    if (!csv_file.is_open()) {
+        throw std::invalid_argument("Could not open file.");
     }
 
-    return m;
-}
+    // Write
+    csv_file << "strain,prop\n";
+    for (int i = 0; i < ws.size(); ++i) {
+        csv_file << i << "," << ws[i] << "\n";
+    }
 
+    // Close
+    csv_file.close();
+}

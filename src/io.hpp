@@ -5,15 +5,14 @@
 #include "data.hpp"
 #include "ibd.hpp"
 #include "libs/eigen-3.4.0/Dense"
-using Eigen::VectorXi;
-using Eigen::MatrixXi;
+using Eigen::VectorXd;
 using Eigen::MatrixBase; // Base class of all matrix types; for templating
 
 
-MatrixXi convert_ibd_state_path_to_pairwise(
-    const VectorXi& ibd_path, 
-    const IBDContainer& ibd
-);
+void write_proportions(
+    const string& output_csv, 
+    const VectorXd ws, 
+    double epsilon = 0.0001);
 
 
 template<typename Derived>
