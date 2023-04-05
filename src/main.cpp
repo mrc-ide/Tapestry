@@ -1,11 +1,14 @@
 #include <iostream>
+#include <iomanip>
 #include <string>
 #include "libs/cli11/CLI11.hpp"
 #include "data.hpp"
 #include "ibd.hpp"
 #include "io.hpp"
 #include "mcmcs.hpp"
+#include "mcmcs_summary.hpp"
 #include "models.hpp"
+#include "model_fitting.hpp"
 #include "parameters.hpp"
 #include "particle_writers.hpp"
 #include "particles.hpp"
@@ -91,17 +94,20 @@ int main(int argc, char* argv[])
 
     // RUN
     // Start timing...
-    Timer<chrono::seconds> timer;
-    timer.start();
+    Timer timer;
     
     // Filter
     if (app.got_subcommand("filter")) {
-        cout << "Running VCF filtering..." << endl;
+        cout << string(80, '-') << endl;
+        cout << "Tapestry: Filtering VCF to informative bi-allelic SNPs" << endl;
+        cout << string(80, '-') << endl;
         cout << "Not yet implemented!" << endl;
     
     // Infer
     } else if (app.got_subcommand("infer")) {
-        cout << "Running inference from VCF..." << endl;
+        cout << string(80, '-') << endl;
+        cout << "Tapestry: Inferring COI, proportions and IBD" << endl;
+        cout << string(80, '-') << endl;
 
         // Create Parameters object
         Parameters params(K, e_0, e_1, v, rho, w_proposal_sd, n_pi_bins);
@@ -117,7 +123,7 @@ int main(int argc, char* argv[])
 
         // Create a Model
         cout << "Creating a model..." << endl;
-        NaiveIBDModel model(params, data);
+        NaiveIBDModel model(params, data);  // switch NoIBD model
         model.print();
 
         // Create MCMC
@@ -131,50 +137,42 @@ int main(int argc, char* argv[])
         ProportionParticleWriter particle_writer;
         mcmc.write_output(output_dir, particle_writer);
 
-        // Particle map_particle = proposal_engine.create_particle();
-
-        cout << "Getting MAP particle ..." << endl;
+        // Fit
+        // Procedure
+        cout << "Fitting..." << endl;
         Particle map_particle = mcmc.get_map_particle();
-        cout << map_particle.ws << endl;
+        std::sort(map_particle.ws.begin(), map_particle.ws.end());
+        ViterbiResult viterbi = model.get_viterbi_path(map_particle);
 
-        cout << "Computing Viterbi Path ..." << endl;
-        VectorXi viterbi_path = model.get_viterbi_path(map_particle);
-        std::string viterbi_csv = output_dir + "/ibd.viterbi_path.csv";
-        write_data_with_annotation(
-            viterbi_csv,
+        // Object
+        ModelFit model_fit(
+            params,
             data,
-            viterbi_path,
-            vector<string>{"ibd_viterbi"}
+            viterbi.logposterior, 
+            map_particle.ws,
+            viterbi.path
         );
-
-        cout << "Try writing pairwise IBD information..." << endl;
-        std::string pairwise_csv = output_dir + "/ibd.viterbi_path.pairwise.csv";
-        IBDContainer ibd(params.K);
-        MatrixXi pairwise_matrix = convert_ibd_state_path_to_pairwise(viterbi_path, ibd);
-        vector<string> col_names;
-        for (const pair<int, int>& col_index_pair : ibd.column_index_to_pair) {
-            stringstream ss;
-            ss << "strain";
-            ss << col_index_pair.first;
-            ss << "-strain";
-            ss << col_index_pair.second;
-            string col_name = ss.str();
-            // col_name << stoi(col_index_pair.first);
-            // col_name << "-S";
-            // col_name << stoi(col_index_pair.second);
-            col_names.push_back(col_name);
+        cout << "  Log-posterior: " << model_fit.logposterior << endl;
+        cout << "  Proportions: " << model_fit.ws.transpose() << endl;
+        cout << "  Effective COI: " << model_fit.Keff << endl;
+        if (model_fit.has_ibd) {
+            cout << "  No. IBD Segments: " << model_fit.n_ibd << endl;
+            cout << "  Mean IBD Segment Length (kbp): " << model_fit.l_ibd/1000 << endl;
         }
-        write_data_with_annotation(
-            pairwise_csv,
-            data,
-            pairwise_matrix,
-            col_names
-        );
 
+
+        model_fit.write_output(output_dir);
+
+        // Particle
+        // IBDContainer ibd(params.K);
+        // MCMCPointEstimator mcmc_estimator(mcmc, data, model, ibd);
+        // mcmc_estimator.compute_point_estimate();
+        // mcmc_estimator.write_output(output_dir);
 
     } else {
         // Throw an exception 
     }
-    cout << "Time elapsed (s): " << timer.elapsed() << endl;
-    cout << "Done." << endl;
+    cout << string(80, '-') << endl;
+    cout << "Time elapsed (ms): " << timer.elapsed<chrono::milliseconds>() << endl;
+    cout << string(80, '-') << endl;
 }

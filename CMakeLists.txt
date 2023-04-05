@@ -13,7 +13,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/build/cmake/modules/")
 
 # Compilation flags
-set(COMPILE_TESTS ON)
+set(COMPILE_TESTS OFF)
 
 
 # ================================================================================
@@ -50,12 +50,14 @@ set(TARGET tapestry)
 
 # Source files
 set(SOURCES 
+    src/bed.cpp
     src/betabin.cpp
     src/combinatorics.cpp
     src/data.cpp
     src/ibd.cpp
     src/io.cpp
     src/mcmcs.cpp
+    src/model_fitting.cpp
     src/models.cpp
     src/parameters.cpp
     src/particle_writers.cpp
