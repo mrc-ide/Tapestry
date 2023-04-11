@@ -1,6 +1,10 @@
-.Rproj.user
-.Rhistory
-.RData
-.Ruserdata
+# macOS
 .DS_Store
-ignore/
+
+# VSCode
+.vscode
+
+# Compilation
+release/
+build/
+!build/cmake/modules/*
