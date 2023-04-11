@@ -1,9 +1,10 @@
+
+<p align="center"><img src="images/logo.png" width="700"></p>
+
  <!-- badges: start -->
   [![checks_develop](https://github.com/mrc-ide/Tapestry/workflows/checks_develop/badge.svg)](https://github.com/mrc-ide/Tapestry/actions)
   [![checks_master](https://github.com/mrc-ide/Tapestry/workflows/checks_master/badge.svg)](https://github.com/mrc-ide/Tapestry/actions)
   <!-- badges: end -->
-
-# Tapestry
 
 Malaria infections often contain multiple genotypes, and when sequenced together
 these produce a complex signal that is a mixture of the individual genotypes.
@@ -51,7 +52,7 @@ For a (slower) debugging version:
 ```
 cd build
 cmake ..
-make .
+make
 ```
 
 For a (faster) release version:
@@ -60,7 +61,7 @@ For a (faster) release version:
 mkdir release
 cd release
 cmake .. -DCMAKE_BUILD_TYPE="Release"
-make .
+make
 ```
 
 **Optional**: By default the tests are not compiled. To compile them, open [CMakeLists.txt](https://github.com/mrc-ide/Tapestry/blob/feature/likelihood/CMakeLists.txt) in a text editor, and change line 16:

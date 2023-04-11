@@ -1,5 +1,6 @@
 #pragma once
 #include <vector>
+#include <utility>
 #include "typedefs.hpp"
 using namespace std;
 
@@ -26,4 +27,9 @@ MatrixXi create_powerset(int K);
  * grouped subsets are also vectors. 
 */
 vector<vector<vector<int>>> create_all_partitions(vector<int> collection);
+
+/*
+* Get all unique pairs from a list of integers
+*/
+vector<pair<int, int>> get_unique_pairs(vector<int> elements);
 

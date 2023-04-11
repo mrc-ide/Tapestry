@@ -36,6 +36,10 @@ protected:
     double acceptance_rate;                     // Accept rate until `ix`
     
     // Storage
+    // TODO: is there a reason not to use Eigen for acceptance / logposterior?
+    // - Initialisation a  bit trickier
+    // - Change to circular brackets
+    // - Otherwise don't see issue
     std::vector<double> acceptance_trace;        // Rolling E[acceptance rate]
     std::vector<double> logposterior_trace;     // Trace of log-posterior values
     std::vector<Particle> particle_trace;       // Trace of particles (i.e. updates)
@@ -47,10 +51,15 @@ public:
         ProposalEngine& proposal_engine
     );
 
+    // Abstract
     virtual void run() = 0;
+
+    // Concrete
     void write_output(
         const string& output_dir, 
         const ParticleWriter& particle_writer) const;
+
+    Particle get_map_particle() const;
 };
 
 

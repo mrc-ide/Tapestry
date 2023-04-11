@@ -1,4 +1,6 @@
+#include <algorithm>
 #include <iostream>
+#include <iterator>
 #include <filesystem>
 #include <fstream>
 #include <stdexcept>
@@ -69,6 +71,19 @@ void MCMC::write_output(
         particles_csv,
         particle_trace
     );
+}
+
+
+Particle MCMC::get_map_particle() const
+{
+    // NB: we exclude the burn-in
+    auto mapIter = std::max_element(
+        logposterior_trace.begin() + n_burn_iters, 
+        logposterior_trace.end()
+    );
+    int ix = std::distance(logposterior_trace.begin(), mapIter);
+    
+    return particle_trace[ix];
 }
 
 
@@ -146,51 +161,4 @@ void MetropolisHastings::run()
     run_burn();
     run_sampling();
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-// void MCMC::write_output(string output_csv)
-// {
-//     // Open file
-//     ofstream f;
-//     f.open(output_csv);
-//     if (!f) {
-//         cerr << "Error: file " << output_csv << " could not be opened." << endl;
-//         exit(1);
-//     }
-
-//     // Write column names
-//     f << "iter,phase,logposterior,";
-//     for (int k = 0; k < params.K-1; ++k) {
-//         f << "prop" << k << ",";
-//     }
-//     f << "prop" << params.K-1 << endl;
-
-//     // Write data
-//     // TODO: sloppy
-//     for (int i = 0; i < ix; ++i) {   
-//         f << i << ",";
-//         if (i < n_burn_iters) {
-//             f << "burn,";
-//         } else {
-//             f << "sample,";
-//         }
-//         f << logposterior_trace[i] << ",";
-//         for (int k = 0; k < params.K - 1; ++k) {
-//             f << particle_trace[i].ws(k) << ",";
-//         }
-//         f << particle_trace[i].ws(params.K - 1) << endl;
-//     }
-//     f.close();
-// };
 

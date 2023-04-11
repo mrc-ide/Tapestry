@@ -1,28 +1,46 @@
-
 import os
 import click
 import subprocess
 import pandas as pd
-from typing import List
-
+from dataclasses import dataclass
 
 
 # ================================================================================
-# Parameters
+# Utilities
 #
 # ================================================================================
 
 
-OUTPUT_DIR = "results"
-INPUT_VCF = "example_data/simulated_infections.vcf"
-SUMMARY_CSV = "example_data/simulated_infections.summary.csv"
-N_SAMPLES = 5
+@dataclass(frozen=False)
+class SimulatedSequenceData:
+    """
+    On top of the simulated VCF, simulated sequence data
+    includes a summary CSV file and a CSV holding all IBD
+    segmenents.
 
+    These are assumed to have the same `prefix` as the VCF,
+    with fixed suffixes.
 
-# ================================================================================
-# Fuctions
-#
-# ================================================================================
+    """
+
+    vcf: str
+
+    source_dir: str = ""
+    vcf_prefix: str = ""
+
+    summary_csv: str = ""
+    segment_csv: str = ""
+
+    results_dir: str = ""
+
+    def __post_init__(self):
+        self.source_dir = os.path.dirname(self.vcf)
+        self.vcf_prefix = os.path.basename(self.vcf).replace(".gz", "").replace(".vcf", "")
+        self.summary_csv = f"{self.source_dir}/{self.vcf_prefix}.summary.csv"
+        self.segment_csv = f"{self.source_dir}/{self.vcf_prefix}.ibd_segments.csv"
+        self.results_dir = produce_dir(
+            self.source_dir.replace("example_data", "results")
+        )
 
 
 def produce_dir(*args):
@@ -49,6 +67,12 @@ def produce_dir(*args):
     return dir_name
 
 
+# ================================================================================
+# Running Tapestry from python
+#
+# ================================================================================
+
+
 def run_tapestry_infer(input_vcf: str, 
                        sample_name: str, 
                        build="release", 
@@ -73,24 +97,6 @@ def run_tapestry_infer(input_vcf: str,
     subprocess.run(cmd, shell=True, check=True)
 
 
-def run_tapestry_infer_multiple_samples(input_vcf: str, 
-                                        sample_names: List[str], 
-                                        build="release", 
-                                        **kwargs):
-    """
-    Run Tapestry across multiple samples
-
-    """
-
-    for sample_name in sample_names:
-        run_tapestry_infer(
-            input_vcf=input_vcf,
-            sample_name=sample_name,
-            build=build,
-            **kwargs
-        )
-
-
 # ================================================================================
 # Entry point
 #
@@ -102,17 +108,8 @@ def run_tapestry_infer_multiple_samples(input_vcf: str,
     "-i",
     "--input_vcf",
     type=click.Path(exists=True),
-    default=INPUT_VCF,
-    required=False,
+    required=True,
     help="Path to input VCF.",
-)
-@click.option(
-    "-c",
-    "--summary_csv",
-    type=click.Path(exists=True),
-    default=SUMMARY_CSV,
-    required=False,
-    help="Path to summary CSV.",
 )
 @click.option(
     "-n",
@@ -134,7 +131,7 @@ def run_tapestry_infer_multiple_samples(input_vcf: str,
     "-w",
     "--w_proposal",
     type=float,
-    default=0.5,
+    default=0.05,
     required=False,
     help="Proportion-titre proposal SD ~N(0, w)."
 )
@@ -146,23 +143,24 @@ def run_tapestry_infer_multiple_samples(input_vcf: str,
     required=False,
     help="Variance in WSAF."
 )
-def main(input_vcf, summary_csv, n_samples, coi, w_proposal, var_wsaf):
+def main(input_vcf, n_samples, coi, w_proposal, var_wsaf):
     """
-    Run `Tapestry` over a selection of samples
+    Run `Tapestry` for multiple samples
 
     """
 
-    # Get sample names
-    summary_df = (
-        pd.read_csv(summary_csv)
-        .head(n_samples)
-    )
-    sample_names = summary_df["sample_id"].tolist()
+    # Collect sequencing data   
+    data = SimulatedSequenceData(input_vcf)
 
-    # Produce output directory
-    results_dir = produce_dir(OUTPUT_DIR)
+    # Get samples to run
+    summary_df = pd.read_csv(data.summary_csv)
+    fix_coi = True
+    if fix_coi:
+        summary_df.query("K == @coi", inplace=True)
+    sample_df = summary_df.sample(n_samples)
+    sample_names = sample_df["sample_id"].tolist()
 
-    # Preparer arguments
+    # Prepare arguments
     args_dt = {
         "--output_dir": "",
         "--COI": coi,
@@ -172,7 +170,7 @@ def main(input_vcf, summary_csv, n_samples, coi, w_proposal, var_wsaf):
 
     # Run over multiple samples
     for sample_name in sample_names:
-        args_dt["--output_dir"] = f"{results_dir}/{sample_name}"
+        args_dt["--output_dir"] = f"{data.results_dir}/{sample_name}"
         run_tapestry_infer(
             input_vcf=input_vcf,
             sample_name=sample_name,
@@ -183,3 +181,4 @@ def main(input_vcf, summary_csv, n_samples, coi, w_proposal, var_wsaf):
 if __name__ == "__main__":
     main()
 
+    

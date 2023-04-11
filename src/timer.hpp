@@ -1,14 +1,16 @@
 #pragma once
 #include <chrono>
+#include <ctime>
+#include <sstream>
+#include <string>
 using namespace std;
 
 // TimeUnit could be:
 // chrono::nanoseconds
 // chrono::microseconds
-// chrono::miliseconds
+// chrono::milliseconds
 // chrono::seconds
 // &c.
-template<typename TimeUnit>
 class Timer
 {
 private:
@@ -16,14 +18,29 @@ private:
     chrono::time_point<Clock> start_time;
 
 public:
-    // Constructors
-    Timer() {};
+    // Constructor
+    Timer()
+        : start_time(Clock::now())
+        {};
 
-    // Methods
-    void start() {
+
+    // Reset the timer
+    void reset() {
         start_time = Clock::now();
     }
+
+    // Return time elapsed
+    template<typename TimeUnit>
     double elapsed() {
         return chrono::duration_cast<TimeUnit>(Clock::now() - start_time).count();
     }
+
+    // Print start time
+    // TODO: can't figure this out, will take like a day of screwing around with chrono
+    // string get_current_time()
+    // {
+    //     //chrono::time_point<Clock> now =  Clock::now();
+    //     time_t now = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+    //     return std::to_string(ctime(&now));
+    // }
 };

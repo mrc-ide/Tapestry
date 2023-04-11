@@ -1,9 +1,14 @@
 #include <iostream>
+#include <iomanip>
 #include <string>
 #include "libs/cli11/CLI11.hpp"
 #include "data.hpp"
+#include "ibd.hpp"
+#include "io.hpp"
 #include "mcmcs.hpp"
+#include "mcmcs_summary.hpp"
 #include "models.hpp"
+#include "model_fitting.hpp"
 #include "parameters.hpp"
 #include "particle_writers.hpp"
 #include "particles.hpp"
@@ -39,7 +44,7 @@ int main(int argc, char* argv[])
     double e_0 = 0.01;          // REF -> ALT error probability
     double e_1 = 0.05;          // ALT -> REF error probability
     double v = 100;             // WSAF dispersion
-    double rho = 13.5;          // Recombination rate; kbp per cM
+    double rho = 13.5;         // Recombination rate; kbp per cM
     int n_pi_bins = 1000;       // No. of WSAF bins in betabinomial lookup
     
     // MCMC parameters
@@ -89,17 +94,20 @@ int main(int argc, char* argv[])
 
     // RUN
     // Start timing...
-    Timer<chrono::seconds> timer;
-    timer.start();
+    Timer timer;
     
     // Filter
     if (app.got_subcommand("filter")) {
-        cout << "Running VCF filtering..." << endl;
+        cout << string(80, '-') << endl;
+        cout << "Tapestry: Filtering VCF to informative bi-allelic SNPs" << endl;
+        cout << string(80, '-') << endl;
         cout << "Not yet implemented!" << endl;
     
     // Infer
     } else if (app.got_subcommand("infer")) {
-        cout << "Running inference from VCF..." << endl;
+        cout << string(80, '-') << endl;
+        cout << "Tapestry: Inferring COI, proportions and IBD" << endl;
+        cout << string(80, '-') << endl;
 
         // Create Parameters object
         Parameters params(K, e_0, e_1, v, rho, w_proposal_sd, n_pi_bins);
@@ -110,28 +118,55 @@ int main(int argc, char* argv[])
         data.print();
 
         // Create a proposal engine
-        cout << "Creating a proposal engine..." << endl;
+        cout << "Creating proposal engine..." << endl;
         ProposalEngine proposal_engine(params);
 
         // Create a Model
-        cout << "Creating a model..." << endl;
-        NoIBDModel model(params, data);
-        model.print();
+        cout << "Creating model..." << endl;
+        NaiveIBDModel model(params, data);  // switch NoIBD model
+        // model.print(); // for now, let's not print
 
         // Create MCMC
-        cout << "Creating an MCMC..." << endl;
+        cout << "Running MCMC..." << endl;
         MetropolisHastings mcmc(params, model, proposal_engine);
-        
-        cout << "Running..." << endl;
         mcmc.run();
         
-        cout << "Writing output..." << endl;
+        cout << "Writing MCMC outputs..." << endl;
         ProportionParticleWriter particle_writer;
         mcmc.write_output(output_dir, particle_writer);
+
+        // Fit
+        // Procedure
+        cout << "Fitting..." << endl;
+        Particle map_particle = mcmc.get_map_particle();
+        std::sort(map_particle.ws.begin(), map_particle.ws.end());
+        ViterbiResult viterbi = model.get_viterbi_path(map_particle);
+
+        // Object
+        ModelFit model_fit(
+            params,
+            data,
+            viterbi.logposterior, 
+            map_particle.ws,
+            viterbi.path
+        );
+        cout << "  Log-posterior: " << model_fit.logposterior << endl;
+        cout << "  Proportions: " << model_fit.ws.transpose() << endl;
+        cout << "  Effective COI: " << model_fit.Keff << endl;
+        if (model_fit.has_ibd) {
+            cout << "  No. IBD Segments: " << model_fit.n_ibd << endl;
+            cout << "  Mean IBD Segment Length (kbp): " << model_fit.l_ibd/1000 << endl;
+            cout << "  N50 IBD Segment Length (kbp): " << model_fit.n50_ibd/1000 << endl;
+            cout << "  Fraction IBD: " << model_fit.f_ibd << endl;
+        }
+        cout << "Writing fit outputs..." << endl;
+        model_fit.write_output(output_dir);
+        cout << "Done." << endl;
 
     } else {
         // Throw an exception 
     }
-    cout << "Time elapsed (s): " << timer.elapsed() << endl;
-    cout << "Done." << endl;
+    cout << string(80, '-') << endl;
+    cout << "Time elapsed (ms): " << timer.elapsed<chrono::milliseconds>() << endl;
+    cout << string(80, '-') << endl;
 }

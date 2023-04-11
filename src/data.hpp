@@ -41,10 +41,13 @@ private:
     double epsilon = 0.001;             // Adjustment to compute WSAF if depth zero
     const string& vcf_path;             // path to VCF file
     const string& sample_name;          // target sample name
+
+    int calc_genome_length();
     
 public:
     int n_samples;
     int n_sites;
+    int genome_length;                  // Length of genome in basepairs (bp)
 
     vector<string> chrom_names;
     ArrayXi chroms;

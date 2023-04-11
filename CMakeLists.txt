@@ -50,10 +50,14 @@ set(TARGET tapestry)
 
 # Source files
 set(SOURCES 
+    src/bed.cpp
     src/betabin.cpp
     src/combinatorics.cpp
     src/data.cpp
+    src/ibd.cpp
+    src/io.cpp
     src/mcmcs.cpp
+    src/model_fitting.cpp
     src/models.cpp
     src/parameters.cpp
     src/particle_writers.cpp
