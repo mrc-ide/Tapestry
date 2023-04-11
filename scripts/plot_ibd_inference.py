@@ -1,7 +1,8 @@
 import os
+import sys
 import click
 import pandas as pd
-import numpy as np
+pd.options.mode.chained_assignment = None 
 
 from collections import namedtuple
 from dataclasses import dataclass
@@ -12,15 +13,11 @@ from matplotlib.gridspec import GridSpec
 from matplotlib.patches import Rectangle
 import seaborn as sns
 
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(os.path.dirname(SCRIPT_DIR))
 
-# ================================================================================
-# Parameters
-#
-# ================================================================================
+from scripts.infer_multiple_samples_v2 import SimulatedSequenceData, produce_dir
 
-
-OUTPUT_DIR = "results"
-SUMMARY_CSV = "example_data/simulated_infections.DRCongo.K04.summary.csv"
 
 
 # ================================================================================
@@ -34,7 +31,7 @@ class BEDRecord:
     chrom: str
     start: int
     end: int
-    name: str=""
+    name: str = ""
 
 
 def get_ibd_segments(chroms: List[str],
@@ -90,10 +87,14 @@ def get_ibd_segments(chroms: List[str],
     return pd.DataFrame(bed_records)
 
 
+
+
 # ================================================================================
-# Plotting classes
+# Plotting
 #
 # ================================================================================
+
+
 
 
 class ChromosomeInformation:
@@ -263,6 +264,7 @@ class WSAFPlotter:
         self.chrom_info.set_genome_axis(ax)
 
 
+# TODO: Some clear code duplication here
 class IBDSegmentPlotter:
 
     IBD_PAIR_HEIGHT = 0.5    
@@ -271,6 +273,8 @@ class IBDSegmentPlotter:
     def __init__(self, segs_df, chrom_info):
         """
         Plot IBD segments across the genome
+        - I probably want to refactor to show all groups, regardless of
+        whether they have any IBD segments
         
         """
         
@@ -287,6 +291,9 @@ class IBDSegmentPlotter:
         # Group by name
         self.pairwise_grps = self.segs_df.groupby("name")
         self.n_grps = len(self.pairwise_grps)
+        
+        # Optional true IBD segmennts
+        self.true_segs = False
         
         
     @classmethod
@@ -313,6 +320,26 @@ class IBDSegmentPlotter:
     
         return cls(segs_df, chrom_info)
     
+    
+    def load_true_segments(self, true_segs_df):
+        """
+        If `true` IBD segments are known, load and process
+        for inclusion in plot
+        
+        """
+        
+        self.true_segs = True
+        self.true_segs_df = true_segs_df
+        
+        # Compute adjusted positions
+        for c in ["start", "end"]:
+            self.true_segs_df[f"p{c}"] = self.chrom_info.get_shifted_positions(
+                chroms=true_segs_df["chrom"], pos=true_segs_df[c]
+            )
+        
+        # Group by name
+        self.true_pairwise_grps = self.true_segs_df.groupby("name")
+        
     
     def _build_y_axis(self, ax):
         """
@@ -368,10 +395,25 @@ class IBDSegmentPlotter:
                     ls='solid', 
                     zorder=-10,
                     alpha=0.25)
-            ax.grid(which='minor', 
+            ax.grid(which='minor',
                     ls='dotted', 
                     zorder=-10, 
                     alpha=0.25)
+            
+        # Add overlay if true
+        if self.true_segs:
+            for j, (name, pair_df) in enumerate(self.true_pairwise_grps):
+                ax.axhline(j, lw=0.5, color='black', zorder=-10)
+                for _, seg in pair_df.iterrows():
+                    rect = Rectangle(
+                        xy=(seg["pstart"], j - self.IBD_BAR_HEIGHT/2),
+                        height=self.IBD_BAR_HEIGHT,
+                        width=seg["pend"] - seg["pstart"],
+                        facecolor="none",
+                        edgecolor="black",
+                        lw=1.5
+                    )
+                    ax.add_patch(rect)
 
 
 class CombinedPlotter:
@@ -440,51 +482,77 @@ class CombinedPlotter:
             plt.close(fig)
 
 
+
+
 # ================================================================================
 # Entry
 #
 # ================================================================================
 
 
-def main():
-    """
-    Load all samples and plot pairwise IBD profiles
-    
-    """
 
-    # Prepare
-    output_dir = OUTPUT_DIR
 
-    # Load summary data
-    summary_df = pd.read_csv(SUMMARY_CSV)
-    truth_samples = list(summary_df["sample_id"])
+@click.command(short_help="Make plots of Tapestry outputs.")
+@click.option(
+    "-i",
+    "--input_vcf",
+    type=click.Path(exists=True),
+    required=True,
+    help="Path to input VCF.",
+)
+def main(input_vcf):
+
+    # Data prepare
+    data = SimulatedSequenceData(input_vcf)
+    summary_df = pd.read_csv(data.summary_csv)
+    true_ibd_segments_df = pd.read_csv(data.segment_csv)
 
     # Iterate over samples
-    sample_names = [s for s in os.listdir(output_dir) if s.startswith("SMI")]
+    sample_names = [s for s in os.listdir(data.results_dir) if s.startswith("SMI")]
     for sample_name in sample_names:
         
         # Create sample directory
         print(f"Plotting sample: {sample_name}...")
-        sample_dir = f"{output_dir}/{sample_name}"
-
-        # Extract parameters
-        if not sample_name in truth_samples:
-            raise ValueError("Sample not found in truth set.")
-        sample_info = summary_df.query("sample_id == @sample_name").squeeze()
+        sample_dir = f"{data.results_dir}/{sample_name}"
         
+        # Extract parameters
+        sample_info = summary_df.query("sample_id == @sample_name").squeeze()
+        if (sample_info.shape[0] == 0):
+            print("  Couldn't find truth. Skipping.")
+            continue
+
         # Prepare title
+        props = ", ".join([f"{float(p):.03f}" for p in sample_info["props"].split(";")])
+
         title = f"{sample_name} | "
-        title += ", ".join([f"{sample_info[p]:.03f}" for p in sample_info.keys() if p.startswith("prop")])
+        title += props
+        #title += ", ".join([f"{sample_info[p]:.03f}" for p in sample_info.keys() if p.startswith("prop")])
         title += " | $f_{IBD}=$" + f"{sample_info['f_ibd']:.03}"
 
+        # LOAD IBD
+        # Pairwise matrix
+        ibd_pairwise_df = pd.read_csv(f"{sample_dir}/fit.ibd.pairwise.csv")
+        # Segments
+        try:
+            ibd_segments_df = pd.read_csv(f"{sample_dir}/fit.ibd.segments.bed",
+                                        sep="\t",
+                                        header=None)
+            ibd_segments_df.columns = ["chrom", "start", "end", "name"]
 
-        # Load pairwise IBD
-        ibd_df = pd.read_csv(f"{output_dir}/{sample_name}/ibd.viterbi_path.pairwise.csv")
+            true_sample_segments_df = true_ibd_segments_df.query("sample_id == @sample_name")
+            true_sample_segments_df.insert(0, "name", 
+                                           [f"strains{row['strain1']}-{row['strain2']}"
+                                            for _, row in true_sample_segments_df.iterrows()])
+        except pd.errors.EmptyDataError:  # no segments
+            ibd_segments_df = pd.DataFrame(columns=["chrom", "start", "end", "name"])
+        
 
+        
         # Plot
-        chrom_info = ChromosomeInformation(ibd_df)
-        wsaf_plotter = WSAFPlotter(ibd_df, chrom_info)
-        ibd_plotter = IBDSegmentPlotter.from_ibd_states(ibd_df, chrom_info)
+        chrom_info = ChromosomeInformation(ibd_pairwise_df)
+        wsaf_plotter = WSAFPlotter(ibd_pairwise_df, chrom_info)
+        ibd_plotter = IBDSegmentPlotter(ibd_segments_df, chrom_info)
+        ibd_plotter.load_true_segments(true_sample_segments_df)
         comb_plotter = CombinedPlotter(chrom_info, wsaf_plotter, ibd_plotter)
         comb_plotter.plot(title=title,
                           output_path=f"{sample_dir}/plot.ibd.pairwise.{sample_name}.pdf")

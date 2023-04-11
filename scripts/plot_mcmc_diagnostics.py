@@ -1,21 +1,20 @@
 import os
+import sys
 import click
 import pandas as pd
 import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
+from dataclasses import dataclass
 from matplotlib.patches import Rectangle
 from matplotlib.gridspec import GridSpec
 
+# from here: https://stackoverflow.com/questions/16981921/relative-imports-in-python-3
+# in future, can move common machinery into /lib
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(os.path.dirname(SCRIPT_DIR))
 
-# ================================================================================
-# Parameters
-#
-# ================================================================================
-
-
-OUTPUT_DIR = "results"
-SUMMARY_CSV = "example_data/simulated_infections.DRCongo.K04.summary.csv"
+from scripts.infer_multiple_samples_v2 import SimulatedSequenceData, produce_dir
 
 
 # ================================================================================
@@ -437,33 +436,39 @@ class DiagnosticsTracePlotter:
 
 @click.command(short_help="Make plots of Tapestry outputs.")
 @click.option(
-    "-c",
-    "--summary_csv",
+    "-i",
+    "--input_vcf",
     type=click.Path(exists=True),
-    default=SUMMARY_CSV,
-    required=False,
-    help="Path to summary CSV.",
+    required=True,
+    help="Path to input VCF.",
 )
-def main(summary_csv):
+def main(input_vcf):
 
     # Prepare
-    output_dir = OUTPUT_DIR
-    summary_df = pd.read_csv(summary_csv)
+    data = SimulatedSequenceData(input_vcf)
+    summary_df = pd.read_csv(data.summary_csv)
 
     # Iterate over samples
-    sample_names = [s for s in os.listdir(output_dir) if s.startswith("SMI")]
+    sample_names = [s for s in os.listdir(data.results_dir) if s.startswith("SMI")]
     for sample_name in sample_names:
         
         # Create sample directory
         print(f"Plotting sample: {sample_name}...")
-        sample_dir = f"{output_dir}/{sample_name}"
+        sample_dir = f"{data.results_dir}/{sample_name}"
         
         # Extract parameters
         sample_info = summary_df.query("sample_id == @sample_name").squeeze()
+        if (sample_info.shape[0] == 0):
+            print("  Couldn't find truth. Skipping.")
+            continue
         
         # Prepare title
+        props = ", ".join([f"{float(p):.03f}" for p in sample_info["props"].split(";")])
+
+
         title = f"{sample_name} | "
-        title += ", ".join([f"{sample_info[p]:.03f}" for p in sample_info.keys() if p.startswith("prop")])
+        title += props
+        #title += ", ".join([f"{sample_info[p]:.03f}" for p in sample_info.keys() if p.startswith("prop")])
         title += " | $f_{IBD}=$" + f"{sample_info['f_ibd']:.03}"
         
         # Plot proportions
@@ -483,3 +488,4 @@ def main(summary_csv):
 if __name__ == "__main__":
     main()
 
+    
