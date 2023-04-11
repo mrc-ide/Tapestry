@@ -16,7 +16,7 @@ import seaborn as sns
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.dirname(SCRIPT_DIR))
 
-from scripts.infer_multiple_samples_v2 import SimulatedSequenceData, produce_dir
+from scripts.infer_multiple_samples import SimulatedSequenceData, produce_dir
 
 
 
