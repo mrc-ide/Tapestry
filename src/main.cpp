@@ -6,7 +6,6 @@
 #include "ibd.hpp"
 #include "io.hpp"
 #include "mcmcs.hpp"
-#include "mcmcs_summary.hpp"
 #include "models.hpp"
 #include "model_fitting.hpp"
 #include "parameters.hpp"
