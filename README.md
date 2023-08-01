@@ -2,7 +2,7 @@
 <p align="center"><img src="images/logo.png" width="700"></p>
 
  <!-- badges: start -->
-  ![build](https://github.com/JasonAHendry/apropos-mcmc/actions/workflows/cmake.yml/badge.svg)
+  ![build](https://github.com/mrc-ide/Tapestry/actions/workflows/build.yml/badge.svg)
   <!-- badges: end -->
 
 Malaria infections often contain multiple genotypes, and when sequenced together
