@@ -1,12 +1,14 @@
 #include <iostream>
 #include <iomanip>
 #include <string>
+#include <vector>
 #include "libs/cli11/CLI11.hpp"
 #include "data.hpp"
 #include "ibd.hpp"
 #include "io.hpp"
 #include "mcmcs.hpp"
 #include "models.hpp"
+#include "model_compare.hpp"
 #include "model_fitting.hpp"
 #include "parameters.hpp"
 #include "particle_writers.hpp"
@@ -121,6 +123,11 @@ int main(int argc, char* argv[])
             std::iota(Ks.begin(), Ks.end(), min_K);
         }
 
+        // We will store the model fits for comparison later
+        // std::vector<std::unique_ptr<ModelFits>> model_fits; TODO: figure out how to do this properly
+        vector<ModelFit> model_fits;
+        model_fits.reserve(max_K - min_K + 1);
+        //model_fits.reserve(Ks.size());
         for (int k : Ks) {
             // Define output directory
             string K_output_dir = output_dir + "/K" + std::to_string(k);
@@ -161,8 +168,21 @@ int main(int argc, char* argv[])
             cout << "Writing fit outputs..." << endl;
             model_fit.write_output(K_output_dir);
             cout << "Done." << endl;
+
+            // Store the fits
+            model_fits.push_back(model_fit);
         }
-        
+
+        // Model comparison
+        cout << "Comparing fits across models..." << endl;
+        ModelCompare model_compare(
+            model_fits,
+            data.n_sites,
+            Ks
+        );
+        string output_csv = output_dir + "/compare.heuristics.csv";
+        model_compare.write_output(output_csv);
+        cout << "Done." << endl;
     } else {
         // Throw an exception 
     }

@@ -57,6 +57,7 @@ set(SOURCES
     src/ibd.cpp
     src/io.cpp
     src/mcmcs.cpp
+    src/model_compare.cpp
     src/model_fitting.cpp
     src/models.cpp
     src/parameters.cpp
