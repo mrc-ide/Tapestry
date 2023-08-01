@@ -13,6 +13,7 @@ jobs:
       - name: Checkout HTSlib
         uses: actions/checkout@v3
         with:
+          submodules: true  # HTSlib uses 'htscodecs' as a submodule
           repository: samtools/htslib
           path: htslib
       
