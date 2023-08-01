@@ -24,13 +24,10 @@ class SimulatedSequenceData:
     """
 
     vcf: str
-
     source_dir: str = ""
     vcf_prefix: str = ""
-
     summary_csv: str = ""
     segment_csv: str = ""
-
     results_dir: str = ""
 
     def __post_init__(self):
@@ -115,17 +112,9 @@ def run_tapestry_infer(input_vcf: str,
     "-n",
     "--n_samples",
     type=int,
-    default=5,
+    default=None,
     required=False,
     help="Number of samples.",
-)
-@click.option(
-    "-K",
-    "--coi",
-    type=int,
-    default=2,
-    required=False,
-    help="COI to run."
 )
 @click.option(
     "-w",
@@ -143,7 +132,7 @@ def run_tapestry_infer(input_vcf: str,
     required=False,
     help="Variance in WSAF."
 )
-def main(input_vcf, n_samples, coi, w_proposal, var_wsaf):
+def main(input_vcf, n_samples, w_proposal, var_wsaf):
     """
     Run `Tapestry` for multiple samples
 
@@ -153,17 +142,15 @@ def main(input_vcf, n_samples, coi, w_proposal, var_wsaf):
     data = SimulatedSequenceData(input_vcf)
 
     # Get samples to run
-    summary_df = pd.read_csv(data.summary_csv)
-    fix_coi = True
-    if fix_coi:
-        summary_df.query("K == @coi", inplace=True)
-    sample_df = summary_df.sample(n_samples)
+    sample_df = pd.read_csv(data.summary_csv)
+    print("Loaded {summary_df.shape[0]} samples from {data.summary_csv}.")
+    if n_samples is not None:
+        print(f"  Downsamling to {n_samples} randomly.")
+        sample_df.sample(n_samples, inplace=True)
     sample_names = sample_df["sample_id"].tolist()
 
-    # Prepare arguments
+    # Prepare arguments accessible through this API
     args_dt = {
-        "--output_dir": "",
-        "--COI": coi,
         "--w_proposal": w_proposal,
         "--var_wsaf": var_wsaf
     }
