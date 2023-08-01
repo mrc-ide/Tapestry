@@ -1,5 +1,10 @@
+#pragma once
 #include <vector>
 #include "bed.hpp"
+#include "data.hpp"
+#include "ibd.hpp"
+#include "models.hpp"
+#include "parameters.hpp"
 #include "libs/eigen-3.4.0/Dense"
 using Eigen::VectorXd;
 using Eigen::VectorXi;
