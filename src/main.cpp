@@ -15,7 +15,7 @@
 #include "particles.hpp"
 #include "proposals.hpp"
 #include "timer.hpp"
-using namespace std; // let's remove this soon
+using namespace std; // TODO: let's remove this soon
 
 
 int main(int argc, char* argv[])
@@ -47,7 +47,7 @@ int main(int argc, char* argv[])
     double e_0 = 0.01;          // REF -> ALT error probability
     double e_1 = 0.05;          // ALT -> REF error probability
     double v = 100;             // WSAF dispersion
-    double rho = 13.5;         // Recombination rate; kbp per cM
+    double rho = 13.5;          // Recombination rate; kbp per cM
     int n_pi_bins = 1000;       // No. of WSAF bins in betabinomial lookup
     
     // MCMC parameters
@@ -136,7 +136,9 @@ int main(int argc, char* argv[])
             Parameters params(k, e_0, e_1, v, rho, w_proposal_sd, n_pi_bins);
             ProposalEngine proposal_engine(params);
             NaiveIBDModel model(params, data); // TODO: Stop recreating BetabinArray 
-            MetropolisHastings mcmc(params, model, proposal_engine);
+            //MetropolisHastings mcmc(params, model, proposal_engine);
+            int n_temps = 5;
+            ParallelTempering mcmc(params, model, proposal_engine, n_temps);
 
             // Some information to usre
             params.print();
