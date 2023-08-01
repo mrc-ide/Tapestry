@@ -10,6 +10,7 @@ build/
 !build/cmake/modules/*
 
 # Python
+__pycache__
 notebooks
 *.ipynb
 *.ipynb_checkpoints
