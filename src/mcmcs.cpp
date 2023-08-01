@@ -46,7 +46,7 @@ void MCMC::write_output(
 {
     
     // Create the directory if it doesn't exist
-    fs::create_directory(output_dir);  // TODO: not sure this is cross-platform
+    fs::create_directories(output_dir);  // TODO: not sure this is cross-platform
     
     // Prepare file paths
     std::string mcmc_csv = output_dir + "/mcmc.diagnostics.csv";

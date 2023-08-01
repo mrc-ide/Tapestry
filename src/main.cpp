@@ -13,7 +13,7 @@
 #include "particles.hpp"
 #include "proposals.hpp"
 #include "timer.hpp"
-using namespace std;
+using namespace std; // let's remove this soon
 
 
 int main(int argc, char* argv[])
@@ -39,7 +39,9 @@ int main(int argc, char* argv[])
     // - Could I initialise Parameters here?
     // - Then options take params-><var>; &c
     // - However, would not be immutable
-    int K = 2;                  // COI
+    int min_K = 1;
+    int max_K = 4;
+    int K = -1;
     double e_0 = 0.01;          // REF -> ALT error probability
     double e_1 = 0.05;          // ALT -> REF error probability
     double v = 100;             // WSAF dispersion
@@ -68,7 +70,7 @@ int main(int argc, char* argv[])
                 ->group("Input and output");
     cmd_infer->add_option("-K, --COI", K, "Complexity of infection.")
                 ->group("Model Hyperparameters")
-                ->check(CLI::Range(1, 6));
+                ->check(CLI::Range(min_K, max_K));
     cmd_infer->add_option("-e, --error_ref", e_0, "Probability of REF->ALT error.")
                 ->group("Model Hyperparameters")
                 ->check(CLI::Range(0, 1));
@@ -108,60 +110,59 @@ int main(int argc, char* argv[])
         cout << "Tapestry: Inferring COI, proportions and IBD" << endl;
         cout << string(80, '-') << endl;
 
-        // Create Parameters object
-        Parameters params(K, e_0, e_1, v, rho, w_proposal_sd, n_pi_bins);
-        params.print();
-
-        // Create Data object
+        // Load data
         VCFData data(input_vcf, sample_name);
         data.print();
 
-        // Create a proposal engine
-        cout << "Creating proposal engine..." << endl;
-        ProposalEngine proposal_engine(params);
-
-        // Create a Model
-        cout << "Creating model..." << endl;
-        NaiveIBDModel model(params, data);  // switch NoIBD model
-        // model.print(); // for now, let's not print
-
-        // Create MCMC
-        cout << "Running MCMC..." << endl;
-        MetropolisHastings mcmc(params, model, proposal_engine);
-        mcmc.run();
-        
-        cout << "Writing MCMC outputs..." << endl;
-        ProportionParticleWriter particle_writer;
-        mcmc.write_output(output_dir, particle_writer);
-
-        // Fit
-        // Procedure
-        cout << "Fitting..." << endl;
-        Particle map_particle = mcmc.get_map_particle();
-        std::sort(map_particle.ws.begin(), map_particle.ws.end());
-        ViterbiResult viterbi = model.get_viterbi_path(map_particle);
-
-        // Object
-        ModelFit model_fit(
-            params,
-            data,
-            viterbi.logposterior, 
-            map_particle.ws,
-            viterbi.path
-        );
-        cout << "  Log-posterior: " << model_fit.logposterior << endl;
-        cout << "  Proportions: " << model_fit.ws.transpose() << endl;
-        cout << "  Effective COI: " << model_fit.Keff << endl;
-        if (model_fit.has_ibd) {
-            cout << "  No. IBD Segments: " << model_fit.n_ibd << endl;
-            cout << "  Mean IBD Segment Length (kbp): " << model_fit.l_ibd/1000 << endl;
-            cout << "  N50 IBD Segment Length (kbp): " << model_fit.n50_ibd/1000 << endl;
-            cout << "  Fraction IBD: " << model_fit.f_ibd << endl;
+        // Setup of Ks vector
+        vector<int> Ks(1, K); 
+        if (K == -1) { // iterate over multiple K values
+            Ks.resize(max_K - min_K + 1);
+            std::iota(Ks.begin(), Ks.end(), min_K);
         }
-        cout << "Writing fit outputs..." << endl;
-        model_fit.write_output(output_dir);
-        cout << "Done." << endl;
 
+        for (int k : Ks) {
+            // Define output directory
+            string K_output_dir = output_dir + "/K" + std::to_string(k);
+
+            // Create key objects
+            Parameters params(k, e_0, e_1, v, rho, w_proposal_sd, n_pi_bins);
+            ProposalEngine proposal_engine(params);
+            NaiveIBDModel model(params, data); // TODO: Stop recreating BetabinArray 
+            MetropolisHastings mcmc(params, model, proposal_engine);
+
+            // Some information to usre
+            params.print();
+
+            // Run MCMC
+            cout << "Runnning MCMC..." << endl;
+            mcmc.run();
+
+            // Write MCMC outputs
+            cout << "Writing MCMC outputs..." << endl;
+            ProportionParticleWriter particle_writer;
+            mcmc.write_output(K_output_dir, particle_writer);
+
+            // Fitting
+            cout << "Fitting..." << endl;
+            Particle map_particle = mcmc.get_map_particle();
+            std::sort(map_particle.ws.begin(), map_particle.ws.end());
+            ViterbiResult viterbi = model.get_viterbi_path(map_particle);
+            // The above gets MAP information, but still need to create
+            // output files that are human-readable, and compute interesting
+            // summary statistics
+            ModelFit model_fit(
+                params,
+                data,
+                viterbi.logposterior, 
+                map_particle.ws,
+                viterbi.path
+            );
+            cout << "Writing fit outputs..." << endl;
+            model_fit.write_output(K_output_dir);
+            cout << "Done." << endl;
+        }
+        
     } else {
         // Throw an exception 
     }
