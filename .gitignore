@@ -8,3 +8,17 @@
 release/
 build/
 !build/cmake/modules/*
+
+# Python
+notebooks
+*.ipynb
+*.ipynb_checkpoints
+
+# Run outputs
+results
+
+# Personal
+src/dev*
+dev*
+images/*.ai
+TODO.txt
