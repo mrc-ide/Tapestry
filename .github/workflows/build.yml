@@ -21,7 +21,7 @@ jobs:
         run: |
           cd htslib
           autoreconf -i
-          ./configure
+          ./configure --prefix ${{github.workspace}}/src/libs/htslib
           make
           make install
 
