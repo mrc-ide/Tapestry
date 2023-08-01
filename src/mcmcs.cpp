@@ -17,7 +17,7 @@ namespace fs = std::filesystem;
 
 
 // ================================================================================
-// Interface for different MCMC methods
+// MCMC Interface
 //
 // ================================================================================
 
@@ -33,10 +33,10 @@ MCMC::MCMC(
     n_burn_iters(100),
     n_sample_iters(900),
     n_total_iters(n_burn_iters + n_sample_iters),
-    acceptance_rate(0.0),
+    acceptance_rate(-1.0),
     acceptance_trace(n_total_iters),
     logposterior_trace(n_total_iters),
-    particle_trace(n_total_iters)
+    particle_trace(n_total_iters, params.K)  // TODO: Here is where space gets allocated. Double check.
 {};
 
 
@@ -87,6 +87,10 @@ Particle MCMC::get_map_particle() const
 }
 
 
+MCMC::~MCMC()
+{}
+
+
 // ================================================================================
 // Concrete MCMC methods
 //
@@ -98,54 +102,24 @@ Particle MCMC::get_map_particle() const
 
 
 MetropolisHastings::MetropolisHastings(
-        const Parameters& params, 
-        const Model& model, 
-        ProposalEngine& proposal_engine)
+    const Parameters& params, 
+    const Model& model, 
+    ProposalEngine& proposal_engine)
     : MCMC(params, model, proposal_engine)
 {};
 
 
-void MetropolisHastings::run_iterations(int n)
-{
-    // Check that ix > 0
-    if (ix == 0) {
-        throw std::invalid_argument("Must have initialised beforee running iterations.");
-    }
-    
-    // Iterate
-    int N = ix + n;
-    for (; ix < N; ++ix) {
-
-        // Propose
-        Particle proposed_particle = proposal_engine.propose_particle(particle_trace[ix-1]);
-        double proposed_logposterior = model.calc_logposterior(proposed_particle);
-
-        // Compute Hastings ratio
-        double A = exp(proposed_logposterior - logposterior_trace[ix-1]);
-        double u = U(rng.engine); 
-        if (u < A) {
-            logposterior_trace[ix] = proposed_logposterior;
-            particle_trace[ix] = proposed_particle;
-        } else {
-            logposterior_trace[ix] = logposterior_trace[ix-1];
-            particle_trace[ix] = particle_trace[ix-1];
-        }
-
-        // Track expected acceptance rate
-        acceptance_rate += (A < 1.0 ? A : 1.0);
-        acceptance_trace[ix] = acceptance_rate / ix;
-    }
-}
-
-
 void MetropolisHastings::run_burn()
 {
-    // Initialise
+    // Random initialisation
+    ix = 0;
     particle_trace[ix] = proposal_engine.create_particle();
     logposterior_trace[ix] = model.calc_logposterior(particle_trace[ix]);
-    acceptance_trace[ix] = 0.0;
+    acceptance_rate = 1.0;
+    acceptance_trace[ix] = 1.0;
     ++ix;
 
+    // Run burn-in iterations
     run_iterations(n_burn_iters - 1);
 }
 
@@ -153,6 +127,47 @@ void MetropolisHastings::run_burn()
 void MetropolisHastings::run_sampling()
 {
     run_iterations(n_sample_iters);
+}
+
+
+void MetropolisHastings::run_iterations(int n)
+{
+    // Check that ix > 0
+    if (ix == 0) {
+        throw std::invalid_argument("Initialise the particles before iterating.");
+    }
+
+    // Current state
+    Particle particle = particle_trace[ix - 1];
+    double logposterior = logposterior_trace[ix - 1];
+    
+    // Iterate
+    int N = ix + n;
+    for (; ix < N; ++ix) {
+
+        // Propose
+        Particle proposed_particle = proposal_engine.propose_particle(particle);
+        double proposed_logposterior = model.calc_logposterior(proposed_particle);
+
+        // Compute acceptance probability
+        // TODO: Important to verify in the same base, else biased
+        double A = std::exp(proposed_logposterior - logposterior); 
+        double u = U(rng.engine);
+
+        // Accept
+        if (u < A) {
+            particle = proposed_particle; // TODO: No longer need proposed particle, should be a move operation
+            logposterior = proposed_logposterior;
+        }
+
+        // Store
+        particle_trace[ix] = particle;
+        logposterior_trace[ix] = logposterior;
+
+        // Track expected acceptance rate
+        acceptance_rate += (A < 1.0 ? A : 1.0);
+        acceptance_trace[ix] = acceptance_rate / ix;
+    }
 }
 
 
