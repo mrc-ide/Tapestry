@@ -28,10 +28,11 @@ protected:
     const Model& model;
     ProposalEngine& proposal_engine;
 
-    // Parameters
+public:
+    // Iterations
     int ix;                                     // Iteration index
-    const int n_burn_iters;                           // Number of burn-in iterations
-    const int n_sample_iters;                         // Number of sampling iterations
+    const int n_burn_iters;                     // Number of burn-in iterations
+    const int n_sample_iters;                   // Number of sampling iterations
     const int n_total_iters;
     double acceptance_rate;                     // Accept rate until `ix`
     
@@ -44,7 +45,6 @@ protected:
     std::vector<double> logposterior_trace;     // Trace of log-posterior values
     std::vector<Particle> particle_trace;       // Trace of particles (i.e. updates)
 
-public:
     MCMC(
         const Parameters& params, 
         const Model& model, 
@@ -128,7 +128,7 @@ public:
     const int swap_freq;                  // Number of iterations per swap attempt
     std::vector<Particle> particles;      // Particle for each temperature
     std::vector<TemperatureLevel> temps;  // Temperature information
-    MatrixXd loglikelihoods;              // Loglikelihoods; for TI; TODO: should be array?
+    MatrixXd loglikelihoods;              // Loglikelihoods; for TI; TODO: should be array? Probably, see ModelEvidence 104-106
 
     //  Recording swaps
     double n_swap_attempts;               // No. swap attempts; same for all pairs of levels

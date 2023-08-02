@@ -1,5 +1,6 @@
 #include <iostream>
 #include <iomanip>
+#include <memory>
 #include <string>
 #include <vector>
 #include "libs/cli11/CLI11.hpp"
@@ -125,36 +126,38 @@ int main(int argc, char* argv[])
 
         // We will store the model fits for comparison later
         // std::vector<std::unique_ptr<ModelFits>> model_fits; TODO: figure out how to do this properly
+        // TODO: Alternate implementation we store just a struct of the key things
         vector<ModelFit> model_fits;
-        model_fits.reserve(max_K - min_K + 1);
-        //model_fits.reserve(Ks.size());
+        std::vector<std::unique_ptr<ParallelTempering>> mcmc_ptrs;
+        model_fits.reserve(Ks.size());
+        mcmc_ptrs.reserve(Ks.size());
         for (int k : Ks) {
+
             // Define output directory
             string K_output_dir = output_dir + "/K" + std::to_string(k);
 
-            // Create key objects
+            // Create objects for this COI
             Parameters params(k, e_0, e_1, v, rho, w_proposal_sd, n_pi_bins);
             ProposalEngine proposal_engine(params);
             NaiveIBDModel model(params, data); // TODO: Stop recreating BetabinArray 
-            //MetropolisHastings mcmc(params, model, proposal_engine);
-            int n_temps = 5;
-            ParallelTempering mcmc(params, model, proposal_engine, n_temps);
+            
+            //MetropolisHastings mcmc(params, model, proposal_engine);       
+            //ParallelTempering mcmc(params, model, proposal_engine, n_temps);
 
-            // Some information to usre
-            params.print();
-
-            // Run MCMC
+            // Create MCMC on the heap
             cout << "Runnning MCMC..." << endl;
-            mcmc.run();
+            int n_temps = 5;
+            mcmc_ptrs.emplace_back(std::make_unique<ParallelTempering>(params, model, proposal_engine, n_temps));
+            mcmc_ptrs.back()->run();
 
             // Write MCMC outputs
             cout << "Writing MCMC outputs..." << endl;
             ProportionParticleWriter particle_writer;
-            mcmc.write_output(K_output_dir, particle_writer);
+            mcmc_ptrs.back()->write_output(K_output_dir, particle_writer);
 
             // Fitting
             cout << "Fitting..." << endl;
-            Particle map_particle = mcmc.get_map_particle();
+            Particle map_particle = mcmc_ptrs.back()->get_map_particle();
             std::sort(map_particle.ws.begin(), map_particle.ws.end());
             ViterbiResult viterbi = model.get_viterbi_path(map_particle);
             // The above gets MAP information, but still need to create
@@ -175,7 +178,7 @@ int main(int argc, char* argv[])
             model_fits.push_back(model_fit);
         }
 
-        // Model comparison
+        // Heuristic model comparison
         cout << "Comparing fits across models..." << endl;
         ModelCompare model_compare(
             model_fits,
@@ -185,6 +188,15 @@ int main(int argc, char* argv[])
         string output_csv = output_dir + "/compare.heuristics.csv";
         model_compare.write_output(output_csv);
         cout << "Done." << endl;
+
+        // Compute model evidence
+        std::cout << "Computing model evidence..." << std::endl;
+        ModelEvidence model_evidence(mcmc_ptrs);
+        model_evidence.calc_summary();
+        std::string evidence_csv = output_dir + "/compare.evidence.csv";
+        model_evidence.write_output(evidence_csv);
+        std::cout << "Done." << std::endl;
+
     } else {
         // Throw an exception 
     }
