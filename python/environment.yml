@@ -1,0 +1,13 @@
+name: unravel
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - python=3.7
+  - seaborn
+  - matplotlib
+  - pandas
+  - numpy
+  - scipy
+  - click
+  - pip
