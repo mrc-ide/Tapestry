@@ -12,6 +12,7 @@ struct Parameters
     const double e_1;
     const double v;
     const double rho;
+    const double G;
     const int n_pi_bins;
 
     // MCMC Parameters
@@ -23,8 +24,9 @@ struct Parameters
         double e_1, 
         double v, 
         double rho, 
+        double G,
         double w_proposal_sd,
-        const int n_pi_bins
+        int n_pi_bins
     );
     
     void print();

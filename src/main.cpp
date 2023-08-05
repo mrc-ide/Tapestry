@@ -45,15 +45,16 @@ int main(int argc, char* argv[])
     int min_K = 1;
     int max_K = 4;
     int K = -1;
-    // Changed below to match pfabricate
-    double e_0 = 0.0001;      // REF -> ALT error probability
-    double e_1 = 0.005;       // ALT -> REF error probability
-    double v = 500;           // WSAF dispersion
-    double rho = 13.5;        // Recombination rate; kbp per cM
-    int n_pi_bins = 1000;     // No. of WSAF bins in betabinomial lookup
+    double e_0 = 0.0001;            // REF -> ALT error probability
+    double e_1 = 0.005;             // ALT -> REF error probability
+    double v = 500;                 // WSAF dispersion
+    double rho = 13.5;              // Recombination rate; kbp per cM
+    double G = 5.0;                 // Generation parameter applied to IBD detection.
+    int n_pi_bins = 1000;           // No. of WSAF bins in betabinomial lookup
     
     // MCMC parameters
-    double w_proposal_sd = 0.1;  // Titres sampled from ~N(0, w_propsal_sd) values tried: 0.5
+    double w_proposal_sd = 0.1;     // Titres sampled from ~N(0, w_propsal_sd)
+    int n_temps = 5;                // Number of temperature levels for PT-MCMC
 
     // OPTIONS
     // Filter
@@ -87,12 +88,18 @@ int main(int argc, char* argv[])
     cmd_infer->add_option("-r, --recomb_rate", rho, "Recombination rate in kbp/cM.")
                 ->group("Model Hyperparameters")
                 ->check(CLI::PositiveNumber);
+    cmd_infer->add_option("-g, --gens", G, "Expected number of ancestral generations for IBD segment length.")
+                ->group("Model Hyperparameters")
+                ->check(CLI::PositiveNumber);
     cmd_infer->add_option("-b, --n_wsaf_bins", n_pi_bins, "Number of WSAF bins in Betabin lookup table.")
                 ->group("Model Hyperparameters")
                 ->check(CLI::Range(100, 10'000));
     cmd_infer->add_option("-w, --w_proposal", w_proposal_sd, "Controls variance in proportion proposals.")
                 ->group("MCMC Parameters")
                 ->check(CLI::PositiveNumber);
+    cmd_infer->add_option("-t, --temps", n_temps, "Number of temperature levels in PT-MCMC.")
+                ->group("MCMC Parameters")
+                ->check(CLI::Range(5, 20));
 
     // Parse
     CLI11_PARSE(app, argc, argv);
@@ -138,14 +145,13 @@ int main(int argc, char* argv[])
             string K_output_dir = output_dir + "/K" + std::to_string(k);
 
             // Create objects for this COI
-            Parameters params(k, e_0, e_1, v, rho, w_proposal_sd, n_pi_bins);
+            Parameters params(k, e_0, e_1, v, rho, G, w_proposal_sd, n_pi_bins);
             ProposalEngine proposal_engine(params);
             NaiveIBDModel model(params, data); // TODO: Stop recreating BetabinArray 
             model.print();
 
             // Create MCMC on the heap
             cout << "Runnning MCMC..." << endl;
-            int n_temps = 5;
             mcmc_ptrs.emplace_back(std::make_unique<ParallelTempering>(params, model, proposal_engine, n_temps));
             mcmc_ptrs.back()->run();
 

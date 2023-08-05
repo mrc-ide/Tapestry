@@ -192,9 +192,9 @@ MatrixXd NaiveIBDModel::calc_transition_matrix(int d_ij, const Parameters& param
     
     // Co-efficients
     // can't declare these `static`! params changes during program execution!
-    double G = 5.0; // TODO: Fix this to be a program parameter
+    // double G = 5.0; // TODO: Fix this to be a program parameter
     double bp_per_M = params.rho * 100 * 1000; // convert from kbp per cM
-    double lambda = (G / bp_per_M) * params.K * (params.K - 1) / 2;
+    double lambda = (params.G / bp_per_M) * params.K * (params.K - 1) / 2;
 
     // Compute possible matrix values
     double stay_prob = exp(-d_ij * lambda);
