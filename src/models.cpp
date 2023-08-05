@@ -190,12 +190,11 @@ vector<MatrixXd> NaiveIBDModel::create_sampling_probs(
 MatrixXd NaiveIBDModel::calc_transition_matrix(int d_ij, const Parameters& params)
 {
     
-    // For now, fix
-    int G = 5;
-
-    // Co-efficient
-    static double bp_per_M = params.rho * 100 * 1000; // convert from kbp per cM
-    static double lambda = (G / bp_per_M) * params.K * (params.K - 1) / 2;
+    // Co-efficients
+    // can't declare these `static`! params changes during program execution!
+    double G = 5.0; // TODO: Fix this to be a program parameter
+    double bp_per_M = params.rho * 100 * 1000; // convert from kbp per cM
+    double lambda = (G / bp_per_M) * params.K * (params.K - 1) / 2;
 
     // Compute possible matrix values
     double stay_prob = exp(-d_ij * lambda);
@@ -348,7 +347,6 @@ ViterbiResult NaiveIBDModel::get_viterbi_path(const Particle& particle) const
     ViterbiResult viterbi(data.n_sites);
     viterbi.logposterior = Vt.maxCoeff(&i);  // for now, not using this
     int last_state = i;
-    cout << "Viterbi log(MAP): " << viterbi.logposterior << endl; 
 
     // Traceback
     t = data.n_sites - 1;  // should already have this value, if in same function
