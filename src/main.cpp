@@ -45,14 +45,15 @@ int main(int argc, char* argv[])
     int min_K = 1;
     int max_K = 4;
     int K = -1;
-    double e_0 = 0.01;          // REF -> ALT error probability
-    double e_1 = 0.05;          // ALT -> REF error probability
-    double v = 100;             // WSAF dispersion
-    double rho = 13.5;          // Recombination rate; kbp per cM
-    int n_pi_bins = 1000;       // No. of WSAF bins in betabinomial lookup
+    // Changed below to match pfabricate
+    double e_0 = 0.0001;      // REF -> ALT error probability
+    double e_1 = 0.005;       // ALT -> REF error probability
+    double v = 500;           // WSAF dispersion
+    double rho = 13.5;        // Recombination rate; kbp per cM
+    int n_pi_bins = 1000;     // No. of WSAF bins in betabinomial lookup
     
     // MCMC parameters
-    double w_proposal_sd = 0.5;  // Titres sampled from ~N(0, w_propsal_sd)
+    double w_proposal_sd = 0.1;  // Titres sampled from ~N(0, w_propsal_sd) values tried: 0.5
 
     // OPTIONS
     // Filter
@@ -118,7 +119,7 @@ int main(int argc, char* argv[])
         data.print();
 
         // Setup of Ks vector
-        vector<int> Ks(1, K); 
+        std::vector<int> Ks(1, K); 
         if (K == -1) { // iterate over multiple K values
             Ks.resize(max_K - min_K + 1);
             std::iota(Ks.begin(), Ks.end(), min_K);
@@ -127,9 +128,9 @@ int main(int argc, char* argv[])
         // We will store the model fits for comparison later
         // std::vector<std::unique_ptr<ModelFits>> model_fits; TODO: figure out how to do this properly
         // TODO: Alternate implementation we store just a struct of the key things
-        vector<ModelFit> model_fits;
-        std::vector<std::unique_ptr<ParallelTempering>> mcmc_ptrs;
+        std::vector<ModelFit> model_fits;
         model_fits.reserve(Ks.size());
+        std::vector<std::unique_ptr<ParallelTempering>> mcmc_ptrs;
         mcmc_ptrs.reserve(Ks.size());
         for (int k : Ks) {
 
@@ -140,9 +141,7 @@ int main(int argc, char* argv[])
             Parameters params(k, e_0, e_1, v, rho, w_proposal_sd, n_pi_bins);
             ProposalEngine proposal_engine(params);
             NaiveIBDModel model(params, data); // TODO: Stop recreating BetabinArray 
-            
-            //MetropolisHastings mcmc(params, model, proposal_engine);       
-            //ParallelTempering mcmc(params, model, proposal_engine, n_temps);
+            model.print();
 
             // Create MCMC on the heap
             cout << "Runnning MCMC..." << endl;
@@ -160,9 +159,7 @@ int main(int argc, char* argv[])
             Particle map_particle = mcmc_ptrs.back()->get_map_particle();
             std::sort(map_particle.ws.begin(), map_particle.ws.end());
             ViterbiResult viterbi = model.get_viterbi_path(map_particle);
-            // The above gets MAP information, but still need to create
-            // output files that are human-readable, and compute interesting
-            // summary statistics
+
             ModelFit model_fit(
                 params,
                 data,
