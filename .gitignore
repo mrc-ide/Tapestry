@@ -1,5 +1,27 @@
-.Rproj.user
-.Rhistory
-.RData
-.Ruserdata
-ignore/
+# macOS
+.DS_Store
+
+# VSCode
+.vscode
+
+# Compilation
+release/
+build/
+!build/cmake/modules/*
+
+# Python
+__pycache__
+notebooks
+*.ipynb
+*.ipynb_checkpoints
+*.egg
+*.egg-info
+
+# Run outputs
+results
+
+# Personal
+src/dev*
+dev*
+images/*.ai
+TODO.txt
