@@ -90,6 +90,7 @@ double ModelEvidence::integrate_numerically(ArrayXd xs, ArrayXd ys) const
 
   // TODO: could also implement more explicitly using Eigen features
   // TODO: note we are also assuming they are sorted, either ascending or descending
+  // TODO: what about space towards ZERO; this can have a lot of area.
   double area = 0;
   for (int i = 1; i < xs.size(); ++i) {
     double height = 0.5 * (ys(i) + ys(i-1));
