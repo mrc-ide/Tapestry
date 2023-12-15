@@ -6,6 +6,13 @@
 using Eigen::ArrayXd;
 using namespace std;
 
+// TODO:
+// `count_sites_in_vcf` should handle missing sites
+// For every site, we check if everything is present
+// I also need to make the PLAF calculation handle missingness
+// Best might be to return a struct:
+// - Could hold the total number of sites as well as those non-missing
+
 
 int count_sites_in_vcf(const string& vcf_path)
 {
@@ -53,8 +60,8 @@ ArrayXd calc_plafs_from_vcf(const string& vcf_path, double epsilon)
     // Prepare arrays
     int n_samples = bcf_hdr_nsamples(hdr);
     int n_sites = count_sites_in_vcf(vcf_path);
-    ArrayXd total_depth(n_sites);
-    ArrayXd total_alts(n_sites);
+    ArrayXd total_depth = ArrayXd::Constant(n_sites, -9999); // TODO: Could be used as default value for missing data.
+    ArrayXd total_alts = ArrayXd::Constant(n_sites, -9999);
 
     // Iterate over records
     int ix = 0;
@@ -65,7 +72,7 @@ ArrayXd calc_plafs_from_vcf(const string& vcf_path, double epsilon)
         int* vals = NULL;
         if (bcf_get_format_int32(hdr, rec, "AD", &vals, &sz) > 0) {
             if (sz != 2*n_samples) {
-                throw std::invalid_argument("Error. All sites must be bi-allelic.");
+                throw std::invalid_argument("Error in estimating PLAF from allelic depths. All sites must be bi-allelic.");
             }
 
             // Store total depth, and alternative depth
