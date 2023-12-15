@@ -42,6 +42,7 @@ void write_data_with_annotation(
     csv_file << "\n";
 
     // Format outputs
+    // See: https://eigen.tuxfamily.org/dox/structEigen_1_1IOFormat.html
     const static Eigen::IOFormat CSVFormat(
         5,
         Eigen::DontAlignCols,
@@ -59,6 +60,10 @@ void write_data_with_annotation(
         csv_file << data.alts(i) << ",";
         csv_file << data.wsafs(i) << ",";
         csv_file << data.plafs(i) << ",";
+        // TODO:
+        // Need to check that the row length is non-zero;
+        // If zero, add '\n'
+        // Alternatively, change formatting above and always add "\n"
         csv_file << annotation_matrix.row(i).format(CSVFormat);
     }
 
