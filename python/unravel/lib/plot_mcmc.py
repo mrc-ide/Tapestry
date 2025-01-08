@@ -218,7 +218,8 @@ class ProportionsTracePlotter:
             fig.savefig(
                 output_path,
                 bbox_inches="tight",
-                pad_inches=0.5
+                pad_inches=0.5,
+                dpi=300
             )
             plt.close(fig)
 
@@ -407,7 +408,8 @@ class DiagnosticsTracePlotter:
             fig.savefig(
                 output_path,
                 bbox_inches="tight",
-                pad_inches=0.5
+                pad_inches=0.5,
+                dpi=300
             )
             plt.close(fig)
 
