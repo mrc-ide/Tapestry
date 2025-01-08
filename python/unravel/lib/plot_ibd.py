@@ -9,14 +9,14 @@ from matplotlib.patches import Rectangle
 from unravel.lib.ibd import get_ibd_segments
 
 class WSAFPlotter:
-    def __init__(self, wsaf_df, chrom_info):
+    def __init__(self, wsaf_df: pd.DataFrame, chrom_info):
         """
         Create a plot of WSAF along the genome
         
         """
         
         # Storage
-        self.wsaf_df = wsaf_df
+        self.wsaf_df = self._calc_wsafs_for_dataframe(wsaf_df)
         self.chrom_info = chrom_info
         
         # Compute adjusted positions
@@ -24,6 +24,24 @@ class WSAFPlotter:
             chroms=wsaf_df["chrom"],
             pos=wsaf_df["pos"]
         )
+
+    def _calc_wsafs_for_dataframe(self, wsaf_df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Process the WSAF dataframe to calculate WSAF, handling missing data.
+        """
+
+        assert "refs" in wsaf_df.columns, "Missing 'refs' column from WSAF dataframe."
+        assert "alts" in wsaf_df.columns, "Missing 'alts' column from WSAF dataframe."
+        
+        def calc_wsaf(row: pd.Series, epsilon: float = 0.001):
+            if row['refs'] == -1 or row['alts'] == -1:
+                return None
+            return row['alts'] / (row['refs'] + row['alts'] + epsilon)
+
+        wsaf_df["wsafs"] = wsaf_df.apply(calc_wsaf, axis=1)
+
+        return wsaf_df
+
         
         
     def plot(self, ax, title=None, add_grid=True):
