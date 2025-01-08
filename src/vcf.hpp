@@ -8,7 +8,7 @@ using namespace std;
 
 /*
 * Count the number of loci / variants in the VCF file at `vcf_path`
-* Here, equivalent to number of rows
+*
 */
 int count_sites_in_vcf(const string& vcf_path);
 
