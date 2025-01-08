@@ -5,38 +5,11 @@
 #include <utility>
 #include <unordered_map>
 #include <vector>
+#include "constants.hpp"
 #include "data.hpp"
 #include "parameters.hpp"
 #include "typedefs.hpp"
 using namespace std;
-
-
-// Create a class that encapsulates a betabinomial array
-// - during development, we may produce different types of arrays
-// - we want them all to behave similiarly
-// - could even profile lookup vs. no lookup
-// - what would API be?
-
-// betabin.compute_emission(pi_val);
-// - But that is different from overloading the () operator
-
-// - We have Factories that produce these different arrays
-
-
-
-// Create a class that is a betabinomial array
-// - I want it to behave close to a normal Eigen array
-// - But it takes float values
-
-
-/*
-* Create a `Betabinomial` array
-*
-*
-*/
-// class BetabinomialArrayFactory
-// {};
-
 
 
 class BetabinomialArray
@@ -60,9 +33,9 @@ private:
     const VCFData& data;
 
     MatrixXd lookup_matrix;
-
-
+    const pair<int, int> missing_pair{MISSING_AD_VALUE, MISSING_AD_VALUE};
     void calc_lookup_matrix(bool as_loglikelihood);
+    void check_valid() const; // Check that all values have been initialised.
 
 public:
 

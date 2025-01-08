@@ -5,6 +5,7 @@
 #include <vector>
 #include "typedefs.hpp"
 #include "betabin.hpp"
+#include "constants.hpp"
 using namespace std;
 
 
@@ -12,9 +13,10 @@ BetabinomialArray::BetabinomialArray(const Parameters& params, const VCFData& da
     : params(params),
     data(data),
     as_loglikelihood(true),
-    lookup_matrix(MatrixXd::Constant(data.n_sites, params.n_pi_bins, -1.0))
+    lookup_matrix(MatrixXd::Constant(data.n_sites, params.n_pi_bins, DEFAULT_FLOAT))
 {
     calc_lookup_matrix(as_loglikelihood);
+    check_valid();
 };
 
 
@@ -22,9 +24,10 @@ BetabinomialArray::BetabinomialArray(const Parameters& params, const VCFData& da
     : params(params),
     data(data),
     as_loglikelihood(as_loglikelihood),
-    lookup_matrix(MatrixXd::Constant(data.n_sites, params.n_pi_bins, -1.0))
+    lookup_matrix(MatrixXd::Constant(data.n_sites, params.n_pi_bins, DEFAULT_FLOAT))
 {
     calc_lookup_matrix(as_loglikelihood);
+    check_valid();
 };
 
 
@@ -42,7 +45,19 @@ void BetabinomialArray::calc_lookup_matrix(bool as_loglikelihood)
     for (int i = 0; i < data.n_sites; ++i) {
 
         // Check if you have already computed for this (REF, ALT) pair
-        pair<int, int> ra_pair(data.refs(i), data.alts(i));
+        pair<int, int> ra_pair{data.refs(i), data.alts(i)};
+        
+        // Handle case of missing data
+        if (ra_pair == missing_pair) {
+            if (as_loglikelihood) {
+                lookup_matrix.row(i).setZero();
+            } else {
+                lookup_matrix.row(i).setOnes();
+            }
+            continue;
+        }
+
+        // Check if already computed
         auto found = ra_pair_map.find(ra_pair);
         if (found != ra_pair_map.end()) {
             lookup_matrix.row(i) = lookup_matrix.row(found->second); // TODO: is this best?
@@ -51,6 +66,7 @@ void BetabinomialArray::calc_lookup_matrix(bool as_loglikelihood)
 
         // If not, compute probabilities
         // TODO: is this math construction best?
+        // TODO: Here is where we are computing the likelihood;
         double tmp0 = lgamma(data.alts(i) + data.refs(i) + 1) - lgamma(data.alts(i) + 1) - lgamma(data.refs(i) + 1);
         double tmp1 = lgamma(params.v) - lgamma(data.alts(i) + data.refs(i) + params.v);
 
@@ -67,6 +83,13 @@ void BetabinomialArray::calc_lookup_matrix(bool as_loglikelihood)
             
             ra_pair_map[ra_pair] = i;
         }
+    }
+}
+
+void BetabinomialArray::check_valid() const
+{
+    if ((lookup_matrix.array() == DEFAULT_FLOAT).any()) {
+        throw std::invalid_argument("Failed to completely initialise Beta-binomial lookup.");
     }
 }
 
