@@ -1,5 +1,5 @@
 import os
-from typing import List, Dict
+from typing import List, Dict, Tuple
 
 # TODO
 # - Sanity checks and useful warnings
@@ -50,7 +50,7 @@ class TapestrySampleOutputDir:
 		self.compare_heuristic_csv = f"{self.tapestry_dir}/compare.heuristic.csv"
 		self.compare_evidence_csv = f"{self.tapestry_dir}/compare.evidence.csv"
 
-	def _get_coi_info(self) -> (List[str], List[int]):
+	def _get_coi_info(self) -> Tuple[List[str], List[int]]:
 		""" 
 		Get all COI directories, 'K[0-9]{1}'
 		
