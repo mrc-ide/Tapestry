@@ -55,13 +55,14 @@ class TapestrySampleOutputDir:
 		Get all COI directories, 'K[0-9]{1}'
 		
 		"""
-
-		coi_dirs = [
-			f"{self.tapestry_dir}/{d}"
-			for d in os.listdir(self.tapestry_dir)
-			if d.startswith("K") and os.path.isdir(f"{self.tapestry_dir}/{d}")
-		]
-		cois = [int(coi_dir[-1]) for coi_dir in coi_dirs]
+		Ks = range(1, 10) # maximum to check is 9
+		coi_dirs = []
+		cois =[]
+		for K in Ks:
+			coi_dir = f"{self.tapestry_dir}/K{K:d}"
+			if os.path.isdir(coi_dir):
+				coi_dirs.append(coi_dir)
+				cois.append(K)
 		
 		return (coi_dirs, cois)
 	

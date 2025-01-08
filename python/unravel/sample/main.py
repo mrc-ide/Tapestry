@@ -16,11 +16,14 @@ def sample(sample_dir: str) -> None:
 
     # Define tapestry directories
     tapestry_dirs = TapestrySampleOutputDir(sample_dir)
+    print(f"Processing tapestry data from: {tapestry_dirs.tapestry_dir}")
 
     # Iterate over COIs and plot
     for coi, coi_dirs in tapestry_dirs.coi.items():
         png_temp = f"{coi_dirs.coi_dir}/plot.{'{name}'}.png"
-        print(f"Plotting for COI={coi}...")
+        if coi == 1:
+            continue
+        print(f"  Plotting COI={coi}...")
 
         # MCMC Plots ---------------------------------------------
         prop_plotter = ProportionsTracePlotter(
@@ -64,4 +67,5 @@ def sample(sample_dir: str) -> None:
         combined_plotter.plot(
             output_path=png_temp.format(name="fit.ibd_segments")
         )
+    print("Done.")
 

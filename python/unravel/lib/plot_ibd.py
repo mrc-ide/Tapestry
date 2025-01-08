@@ -281,7 +281,6 @@ class CombinedPlotter:
         for i, axis_item in enumerate(axes_order):
             
             # Plot
-            print(f"  {axis_item.name}...")
             ax = plt.subplot(gs[l:(l+axis_item.rows+1)])
             axis_item.plot_func(ax)
             
