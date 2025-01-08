@@ -1,3 +1,4 @@
+#include <iostream>
 #include <stdexcept>
 #include <string>
 #include "htslib/vcf.h"
@@ -5,13 +6,6 @@
 #include "vcf.hpp"
 using Eigen::ArrayXd;
 using namespace std;
-
-// TODO:
-// `count_sites_in_vcf` should handle missing sites
-// For every site, we check if everything is present
-// I also need to make the PLAF calculation handle missingness
-// Best might be to return a struct:
-// - Could hold the total number of sites as well as those non-missing
 
 
 int count_sites_in_vcf(const string& vcf_path)
@@ -60,27 +54,45 @@ ArrayXd calc_plafs_from_vcf(const string& vcf_path, double epsilon)
     // Prepare arrays
     int n_samples = bcf_hdr_nsamples(hdr);
     int n_sites = count_sites_in_vcf(vcf_path);
-    ArrayXd total_depth = ArrayXd::Constant(n_sites, -9999); // TODO: Could be used as default value for missing data.
-    ArrayXd total_alts = ArrayXd::Constant(n_sites, -9999);
+    ArrayXd total_depth = ArrayXd::Constant(n_sites, 0);
+    ArrayXd total_alts = ArrayXd::Constant(n_sites, 0);
 
     // Iterate over records
     int ix = 0;
     while(vcf_read(fp, hdr, rec) == 0) {
+        // Store missingness for this record
+        int n_samples_missing_data = 0;
         
         // Extract allelic depths
         int sz = 0;
         int* vals = NULL;
         if (bcf_get_format_int32(hdr, rec, "AD", &vals, &sz) > 0) {
-            if (sz != 2*n_samples) {
+
+            int N = 2 * n_samples;
+            if (sz != N) {
                 throw std::invalid_argument("Error in estimating PLAF from allelic depths. All sites must be bi-allelic.");
             }
 
-            // Store total depth, and alternative depth
-            for (int j = 0; j < n_samples; ++j) {
+            for (int j = 0; j < N; ++j) {
+                
+                // Check for missing data
+                if (vals[j] == bcf_int32_missing) {
+                    n_samples_missing_data += 1;
+                    continue;
+                }
+                if (vals[j] == bcf_int32_vector_end) {
+                    continue;
+                }
+
+                // Accumulate
                 total_depth(ix) += vals[j];
                 if (j % 2 == 1) {
                     total_alts(ix) += vals[j];
                 }
+            }
+
+            if (n_samples - n_samples_missing_data < 10) {
+                cout << "WARNING: Less than 10 samples have data for site " << ix << " in VCF." << endl;
             }
 
         } else {

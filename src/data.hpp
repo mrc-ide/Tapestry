@@ -24,7 +24,6 @@ using Eigen::ArrayXd;
 
 
 
-
 /*
 * Encapsulate VCF data from `vcf_path` for a target sample, 
 * given by `sample_name`
@@ -38,15 +37,15 @@ using Eigen::ArrayXd;
 class VCFData
 {
 private:
-    double epsilon = 0.001;             // Adjustment to compute WSAF if depth zero
-    const string& vcf_path;             // path to VCF file
-    const string& sample_name;          // target sample name
+    const string& vcf_path;             // Path to VCF
+    const string& sample_name;          // Target sample name
 
     int calc_genome_length();
     
 public:
     int n_samples;
     int n_sites;
+    int n_sites_missing;
     int genome_length;                  // Length of genome in basepairs (bp)
 
     vector<string> chrom_names;
@@ -54,11 +53,11 @@ public:
     ArrayXi pos;
     ArrayXi refs;                       // Read counts of REF allele
     ArrayXi alts;                       // Read counts of ALT allele
-    ArrayXd wsafs;                      // Within-sample ALT freq. [ALT/(REF+ALT+epsilon)]
-    ArrayXd plafs;                      // Population-level allele freq.
+    ArrayXd plafs;                      // Population-level allele frequencies
 
     VCFData(const string& vcf_path, const string& sample_name);
 
+    void check_valid() const;
     void print() const;
 };
 

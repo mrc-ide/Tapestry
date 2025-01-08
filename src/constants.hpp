@@ -14,3 +14,9 @@ const int BELL_NUMBERS[11] = {
         21147,
         115975
 };
+
+// Value assigned if allelic depth (AD) data is missing
+const int MISSING_AD_VALUE = -1;
+
+const int DEFAULT_INT = -9999;
+const float DEFAULT_FLOAT = -9999.0;

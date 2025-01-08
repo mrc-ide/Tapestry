@@ -35,7 +35,7 @@ void write_data_with_annotation(
     }
 
     // Write column names
-    csv_file << "chrom,pos,refs,alts,wsafs,plafs";
+    csv_file << "chrom,pos,refs,alts,plafs";
     for (const string& col_name : annotation_columns) {
         csv_file << "," << col_name;
     }
@@ -58,7 +58,7 @@ void write_data_with_annotation(
         csv_file << data.pos(i) << ",";
         csv_file << data.refs(i) << ",";
         csv_file << data.alts(i) << ",";
-        csv_file << data.wsafs(i) << ",";
+        //csv_file << data.wsafs(i) << ",";
         csv_file << data.plafs(i) << ",";
         // TODO:
         // Need to check that the row length is non-zero;
