@@ -1,7 +1,7 @@
 import click
 # from unravel.coi.commands import coi
 from unravel.sample.commands import sample
-# from unravel.population.commads import population
+from unravel.population.commands import population
 
 @click.group()
 def cli():
@@ -14,7 +14,7 @@ def cli():
 
 # cli.add_command(coi)
 cli.add_command(sample)
-# cli.add_command(population)
+cli.add_command(population)
 
 
 if __name__ == "__main__":
