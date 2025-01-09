@@ -137,7 +137,7 @@ int main(int argc, char* argv[])
         // TODO: Alternate implementation we store just a struct of the key things
         std::vector<ModelFit> model_fits;
         model_fits.reserve(Ks.size());
-        std::vector<std::unique_ptr<ParallelTempering>> mcmc_ptrs;
+        std::vector<std::unique_ptr<MCMC>> mcmc_ptrs;
         mcmc_ptrs.reserve(Ks.size());
         for (int k : Ks) {
 
@@ -147,12 +147,12 @@ int main(int argc, char* argv[])
             // Create objects for this COI
             Parameters params(k, e_0, e_1, v, rho, G, w_proposal_sd, n_pi_bins);
             ProposalEngine proposal_engine(params);
-            NaiveIBDModel model(params, data); // TODO: Stop recreating BetabinArray 
+            Model model(params, data); // TODO: Stop recreating BetabinArray 
             model.print();
 
             // Create MCMC on the heap
             cout << "Runnning MCMC..." << endl;
-            mcmc_ptrs.emplace_back(std::make_unique<ParallelTempering>(params, model, proposal_engine, n_temps));
+            mcmc_ptrs.emplace_back(std::make_unique<MCMC>(params, model, proposal_engine, n_temps));
             mcmc_ptrs.back()->run();
 
             // Write MCMC outputs

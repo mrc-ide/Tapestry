@@ -16,16 +16,15 @@
 namespace fs = std::filesystem;
 
 
-// ================================================================================
-// MCMC Interface
-//
-// ================================================================================
-
+// --------------------------------------------------------------------------------
+// Parallel Tempering
+// --------------------------------------------------------------------------------
 
 MCMC::MCMC(
     const Parameters& params,
     const Model& model,
-    ProposalEngine& proposal_engine) 
+    ProposalEngine& proposal_engine,
+    int n_temps) 
     : params(params),
     model(model),
     proposal_engine(proposal_engine),
@@ -36,7 +35,15 @@ MCMC::MCMC(
     acceptance_rate(-1.0),
     acceptance_trace(n_total_iters),
     logposterior_trace(n_total_iters),
-    particle_trace(n_total_iters, params.K)  // TODO: Here is where space gets allocated. Double check.
+    particle_trace(n_total_iters, params.K),  // TODO: Here is where space gets allocated. Double check.
+    n_temps(n_temps),
+    swap_freq(10),  // For now just set as constant
+    particles(n_temps),  // Not exactly sure how this looks
+    temps(create_temp_levels(particles)),
+    loglikelihoods(MatrixXd::Constant(n_total_iters, n_temps, -9999)),
+    n_swap_attempts(0.0),
+    n_swaps(ArrayXd::Constant(n_temps - 1, 0.0)),
+    swap_rates(MatrixXd::Constant(n_total_iters, n_temps - 1, 0.0))
 {};
 
 
@@ -71,6 +78,46 @@ void MCMC::write_output(
         particles_csv,
         particle_trace
     );
+
+    // Prepare file paths
+    std::string llk_csv = output_dir + "/mcmc.likelihood.csv";
+    std::string beta_csv = output_dir + "/mcmc.betas.csv";
+    std::string swap_csv = output_dir + "/mcmc.swap_rates.csv";
+
+    // Write loglikelihood matrix
+    const static Eigen::IOFormat CSVFormat(6, Eigen::DontAlignCols, ",",  "\n");
+    std::ofstream llk_file(llk_csv);
+    if (!llk_file.is_open()) {
+        throw std::invalid_argument("Could not open output file.");
+    }
+    for (int j = 0; j < n_temps; ++j) {
+        llk_file << "level" << j << (j < n_temps - 1 ? "," : "\n");
+    }
+    llk_file << loglikelihoods.format(CSVFormat);
+    llk_file.close();
+
+    // Write beta values
+    std::ofstream beta_file(beta_csv);
+    if (!beta_file.is_open()) {
+        throw std::invalid_argument("Could not open output file.");
+    }
+    beta_file << "level,beta\n";
+    for (int j = 0; j < n_temps; ++j) {
+        beta_file << j << "," << temps[j].beta << "\n";
+    }
+    beta_file.close();
+
+    // Quick write of swap rates; should add to mcmc.diagnostics.csv
+    std::ofstream swap_file(swap_csv);
+    if (!swap_file.is_open()) {
+        throw std::invalid_argument("Could not open output file.");
+    }
+    for (int j = 0; j < n_temps - 1; ++j) {
+        swap_file << "swap_" << j << "-" << j+1 << (j < n_temps - 2 ? "," : "\n");
+    }
+    swap_file << swap_rates.format(CSVFormat);
+    swap_file.close();
+    
 }
 
 
@@ -87,121 +134,7 @@ Particle MCMC::get_map_particle() const
 }
 
 
-MCMC::~MCMC()
-{}
-
-
-// ================================================================================
-// Concrete MCMC methods
-//
-// ================================================================================
-
-// --------------------------------------------------------------------------------
-// Metropolis-Hastings
-// --------------------------------------------------------------------------------
-
-
-MetropolisHastings::MetropolisHastings(
-    const Parameters& params, 
-    const Model& model, 
-    ProposalEngine& proposal_engine)
-    : MCMC(params, model, proposal_engine)
-{};
-
-
-void MetropolisHastings::run_burn()
-{
-    // Random initialisation
-    ix = 0;
-    particle_trace[ix] = proposal_engine.create_particle();
-    logposterior_trace[ix] = model.calc_logposterior(particle_trace[ix]);
-    acceptance_rate = 1.0;
-    acceptance_trace[ix] = 1.0;
-    ++ix;
-
-    // Run burn-in iterations
-    run_iterations(n_burn_iters - 1);
-}
-
-
-void MetropolisHastings::run_sampling()
-{
-    run_iterations(n_sample_iters);
-}
-
-
-void MetropolisHastings::run_iterations(int n)
-{
-    // Check that ix > 0
-    if (ix == 0) {
-        throw std::invalid_argument("Initialise the particles before iterating.");
-    }
-
-    // Current state
-    Particle particle = particle_trace[ix - 1];
-    double logposterior = logposterior_trace[ix - 1];
-    
-    // Iterate
-    int N = ix + n;
-    for (; ix < N; ++ix) {
-
-        // Propose
-        Particle proposed_particle = proposal_engine.propose_particle(particle);
-        double proposed_logposterior = model.calc_logposterior(proposed_particle);
-
-        // Compute acceptance probability
-        // TODO: Important to verify in the same base, else biased
-        double A = std::exp(proposed_logposterior - logposterior); 
-        double u = U(rng.engine);
-
-        // Accept
-        if (u < A) {
-            particle = proposed_particle; // TODO: No longer need proposed particle, should be a move operation
-            logposterior = proposed_logposterior;
-        }
-
-        // Store
-        particle_trace[ix] = particle;
-        logposterior_trace[ix] = logposterior;
-
-        // Track expected acceptance rate
-        acceptance_rate += (A < 1.0 ? A : 1.0);
-        acceptance_trace[ix] = acceptance_rate / ix;
-    }
-}
-
-
-void MetropolisHastings::run()
-{
-    run_burn();
-    run_sampling();
-}
-
-
-// --------------------------------------------------------------------------------
-// Parallel Tempering
-// --------------------------------------------------------------------------------
-
-
-ParallelTempering::ParallelTempering(
-    const Parameters& params, 
-    const Model& model, 
-    ProposalEngine& proposal_engine,
-    int n_temps)
-    : MCMC(params, model, proposal_engine),
-    n_temps(n_temps),
-    swap_freq(10),  // For now just set as constant
-    particles(n_temps),  // Not exactly sure how this looks
-    temps(create_temp_levels(particles)),
-    loglikelihoods(MatrixXd::Constant(n_total_iters, n_temps, -9999)),
-    n_swap_attempts(0.0),
-    n_swaps(ArrayXd::Constant(n_temps - 1, 0.0)),
-    swap_rates(MatrixXd::Constant(n_total_iters, n_temps - 1, 0.0))
-{}
-
-
-
-ParallelTempering::TemperatureLevel::TemperatureLevel()
+MCMC::TemperatureLevel::TemperatureLevel()
     : beta(0.0),
     particle_ptr(NULL),
     loglikelihood(-9999),
@@ -209,15 +142,14 @@ ParallelTempering::TemperatureLevel::TemperatureLevel()
 {}
 
 
-
-std::vector<ParallelTempering::TemperatureLevel> ParallelTempering::create_temp_levels(
+std::vector<MCMC::TemperatureLevel> MCMC::create_temp_levels(
     std::vector<Particle>& particles, 
     double lambda)
 {
 
     // Initialise
     int n_temps = particles.size();
-    std::vector<ParallelTempering::TemperatureLevel> temp_levels(n_temps);
+    std::vector<MCMC::TemperatureLevel> temp_levels(n_temps);
 
     // Populate
     double beta = 1.0;
@@ -231,7 +163,7 @@ std::vector<ParallelTempering::TemperatureLevel> ParallelTempering::create_temp_
 }
 
 
-void ParallelTempering::run_burn()
+void MCMC::run_burn()
 {
     // Initialise
     for (int j = 0; j < n_temps; ++j) {
@@ -250,14 +182,14 @@ void ParallelTempering::run_burn()
 }
 
 
-void ParallelTempering::run_sampling()
+void MCMC::run_sampling()
 {
     run_iterations(n_sample_iters);
 }
 
 
 
-void ParallelTempering::run_iterations(int n)
+void MCMC::run_iterations(int n)
 {
     int N = ix + n;
     for (; ix < N; ++ix) {
@@ -324,58 +256,11 @@ void ParallelTempering::run_iterations(int n)
 }
 
 
-void ParallelTempering::run()
+void MCMC::run()
 {
     run_burn();
     run_sampling();
 }
 
 
-void ParallelTempering::write_output(
-    const std::string& output_dir,
-    const ParticleWriter& particle_writer) const
-{
-    
-    // Call parent method
-    MCMC::write_output(output_dir, particle_writer);
-
-    // Prepare file paths
-    std::string llk_csv = output_dir + "/mcmc.likelihood.csv";
-    std::string beta_csv = output_dir + "/mcmc.betas.csv";
-    std::string swap_csv = output_dir + "/mcmc.swap_rates.csv";
-
-    // Write loglikelihood matrix
-    const static Eigen::IOFormat CSVFormat(6, Eigen::DontAlignCols, ",",  "\n");
-    std::ofstream llk_file(llk_csv);
-    if (!llk_file.is_open()) {
-        throw std::invalid_argument("Could not open output file.");
-    }
-    for (int j = 0; j < n_temps; ++j) {
-        llk_file << "level" << j << (j < n_temps - 1 ? "," : "\n");
-    }
-    llk_file << loglikelihoods.format(CSVFormat);
-    llk_file.close();
-
-    // Write beta values
-    std::ofstream beta_file(beta_csv);
-    if (!beta_file.is_open()) {
-        throw std::invalid_argument("Could not open output file.");
-    }
-    beta_file << "level,beta\n";
-    for (int j = 0; j < n_temps; ++j) {
-        beta_file << j << "," << temps[j].beta << "\n";
-    }
-    beta_file.close();
-
-    // Quick write of swap rates; should add to mcmc.diagnostics.csv
-    std::ofstream swap_file(swap_csv);
-    if (!swap_file.is_open()) {
-        throw std::invalid_argument("Could not open output file.");
-    }
-    for (int j = 0; j < n_temps - 1; ++j) {
-        swap_file << "swap_" << j << "-" << j+1 << (j < n_temps - 2 ? "," : "\n");
-    }
-    swap_file << swap_rates.format(CSVFormat);
-    swap_file.close();
-}
 

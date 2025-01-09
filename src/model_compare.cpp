@@ -74,7 +74,7 @@ void ModelCompare::write_output(std::string output_csv)
 // --------------------------------------------------------------------------------
 
 
-ModelEvidence::ModelEvidence(const std::vector<std::unique_ptr<ParallelTempering>>& mcmc_ptrs)
+ModelEvidence::ModelEvidence(const std::vector<std::unique_ptr<MCMC>>& mcmc_ptrs)
   : n_mcmcs(mcmc_ptrs.size()),
   mcmc_ptrs(mcmc_ptrs),
   logevidences(ArrayXd::Constant(n_mcmcs, 0.0)),
@@ -102,7 +102,7 @@ double ModelEvidence::integrate_numerically(ArrayXd xs, ArrayXd ys) const
 }
 
 
-ArrayXd ModelEvidence::calc_meanloglikelihoods(const ParallelTempering& mcmc) const
+ArrayXd ModelEvidence::calc_meanloglikelihoods(const MCMC& mcmc) const
 {
   // TODO: would be cleaner using Eigen views
   VectorXd m = mcmc.loglikelihoods(Eigen::seq(mcmc.n_burn_iters, Eigen::last), Eigen::all).colwise().mean();

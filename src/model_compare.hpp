@@ -64,7 +64,7 @@ class ModelEvidence
 private:
     // Pointer to vector of ParallelTempering MCMCs
     int n_mcmcs;
-    const std::vector<std::unique_ptr<ParallelTempering>>& mcmc_ptrs;
+    const std::vector<std::unique_ptr<MCMC>>& mcmc_ptrs;
 
     // Computed
     ArrayXd logevidences;       // The log-evidence P(model|data) for each MCMC
@@ -79,7 +79,7 @@ private:
     *  TODO: not doing extrapolation yet.
     */
     double integrate_numerically(ArrayXd xs, ArrayXd ys) const;
-    ArrayXd calc_meanloglikelihoods(const ParallelTempering& mcmc) const;
+    ArrayXd calc_meanloglikelihoods(const MCMC& mcmc) const;
     void calc_logevidences();
 
     /* Compute the posterior distribution over the MCMC models
@@ -91,7 +91,7 @@ private:
     void calc_posterior();
 
 public:
-    ModelEvidence(const std::vector<std::unique_ptr<ParallelTempering>>& mcmc_ptrs);
+    ModelEvidence(const std::vector<std::unique_ptr<MCMC>>& mcmc_ptrs);
 
     /* Interface method; compute the log-evidences annd
     *  the posterior
