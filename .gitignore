@@ -27,3 +27,4 @@ images/*.ai
 TODO.txt
 /ignore
 .Rproj.user
+/output

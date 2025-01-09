@@ -36,13 +36,14 @@ public:
     double acceptance_rate;                     // Accept rate until `ix`
     
     // Storage
-    // TODO: is there a reason not to use Eigen for acceptance / logposterior?
+    // TODO: is there a reason not to use Eigen for these vectors instead of std::vector?
     // - Initialisation a  bit trickier
     // - Change to circular brackets
     // - Otherwise don't see issue
     std::vector<double> acceptance_trace;        // Rolling E[acceptance rate]
-    std::vector<double> logposterior_trace;     // Trace of log-posterior values
-    std::vector<Particle> particle_trace;       // Trace of particles (i.e. updates)
+    std::vector<double> loglike_trace;           // Trace of log-likelihood
+    std::vector<double> logprior_trace;          // Trace of log-prior
+    std::vector<Particle> particle_trace;        // Trace of particles (i.e. updates)
 
     MCMC(
         const Parameters& params, 
@@ -106,8 +107,8 @@ private:
     {
         double beta;
         Particle* particle_ptr;
-        double loglikelihood;  // Needed for swaps; Thermodynamic Integration (TI)
-        double beta_logposterior;   // Needed for within-level MH updates
+        double loglike;
+        double logprior;
 
         TemperatureLevel();    // TODO: Hmm.. what goes in constructor?
     };
