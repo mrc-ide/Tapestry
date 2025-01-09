@@ -19,152 +19,30 @@ using Eigen::ArrayXi;
 using Eigen::ArrayXd;
 
 
-// ================================================================================
-// Interface for different models
-//
-// ================================================================================
-
-
-Model::Model(const Parameters& params, const VCFData& data)
-    : params(params),
-    data(data)
-{};
-
-
-double Model::calc_logposterior(const Particle& particle) const
-{
-    return calc_logprior(particle) + calc_loglikelihood(particle);
-}
-
-
-Model::~Model()
-{};
-
-
-// ================================================================================
-// Concrete model implementations
-//
-// ================================================================================
-
-// --------------------------------------------------------------------------------
-// No IBD model
-// --------------------------------------------------------------------------------
-
-
-NoIBDModel::NoIBDModel(const Parameters& params, const VCFData& data)
-    : Model(params, data),
-    strains(create_strains(params.K)),
-    allele_configs(create_allele_configs(params.K)),
-    sampling_probs(create_sampling_probs(data, allele_configs)),
-    betabin_lookup(params, data, false) // want linear Betabin probs
-{};
-
-
-std::vector<int> NoIBDModel::create_strains(int K)
-{
-    std::vector<int> strains(K);
-    std::iota(strains.begin(), strains.end(), 0);
-    return strains;
-}
-
-
-MatrixXi NoIBDModel::create_allele_configs(int K)
-{
-    return create_powerset(K);
-}
-
-
-MatrixXd NoIBDModel::create_sampling_probs(
-        const VCFData& data,
-        const MatrixXi& allele_configs
-    )
-{
-    
-    int n_strains = allele_configs.cols();  // elsewhere K
-    int n_allele_configs = allele_configs.rows();
-    
-    // Prepare storage
-    MatrixXd sampling_probs = MatrixXd::Constant(data.n_sites, n_allele_configs, -1.0);
-
-    // Compute total ALT and REF carrying strains for each allele config
-    ArrayXd alt_counts = allele_configs.rowwise().sum().cast<double>();
-    ArrayXd ref_counts = ArrayXd::Constant(n_allele_configs, n_strains) - alt_counts;
-
-    // Compute sampling probability p^ALT(1 - p)^REF
-    // TODO: possibly vectorised implementation of this entire routine
-    for (int i = 0; i < data.n_sites; ++i) {
-        double p = data.plafs(i);
-        sampling_probs.row(i) = Eigen::pow(p, alt_counts) * Eigen::pow(1-p, ref_counts);
-    }
-
-    // TODO:
-    // - we want sites as columns for subsequent matrix multi;
-    // - but looping over rows should be faster, hence transposing rather than building this way
-    return sampling_probs.transpose();
-}
-
-
-double NoIBDModel::calc_logprior(const Particle& particle) const
-{
-    return 0;  // Uniform
-}
-
-
-double NoIBDModel::calc_loglikelihood(const Particle& particle) const
-{
-    ArrayXd wsaf = (allele_configs.cast<double>() * particle.ws.transpose()).array();
-    ArrayXd wsaf_adj = (1 - wsaf) * params.e_0 + (1 - params.e_1) * wsaf;
-
-    MatrixXd wsaf_betabin_probs = betabin_lookup.subset(wsaf_adj);
-
-    VectorXd emission_probs(data.n_sites);
-    for (int i = 0; i < data.n_sites; ++i) {
-        emission_probs(i) = wsaf_betabin_probs.row(i) * sampling_probs.col(i);
-    }
-    
-    return emission_probs.array().log().sum(); // TODO: base?
-}
-
-
-void NoIBDModel::print() const
-{
-    std::cout << "Strains" << std::endl;
-    for (int i=0; i<params.K; ++i) std::cout << strains[i] << "\t";
-    std::cout << endl;
-    std::cout << "Allele Configurations:" << std::endl;
-    std::cout << allele_configs << std::endl;
-    std::cout << "Sampling probabilities: " << std::endl;
-    std::cout << sampling_probs.col(0) << std::endl;
-}
-
-
 // --------------------------------------------------------------------------------
 // Naive IBD model
 // --------------------------------------------------------------------------------
 
-
-NaiveIBDModel::NaiveIBDModel(const Parameters& params, const VCFData& data)
-    : Model(params, data),
+// Constructor
+Model::Model(const Parameters& params, const VCFData& data)
+    : params(params),
+    data(data),
     allele_configs(create_allele_configs(params.K)),
-    ibd(params.K), // TODO: instantiate here, or pass? Probably cleaner to pass.
+    ibd(params.K),
     sampling_probs(create_sampling_probs(data, allele_configs, ibd.states)),
-    betabin_lookup(params, data, false),  // want linear probabilities
+    betabin_lookup(params, data, false),
     transition_matrices(create_transition_matrices(params, data))
-    // F(MatrixXd::Constant(data.n_sites, BELL_NUMBERS[params.K], -1.0)),
-    // scales(VectorXd::Constant(data.n_sites, -1.0))
 {};
 
-
-MatrixXi NaiveIBDModel::create_allele_configs(int K)
+MatrixXi Model::create_allele_configs(int K)
 {
     return create_powerset(K);
 }
 
-
-vector<MatrixXd> NaiveIBDModel::create_sampling_probs(
+vector<MatrixXd> Model::create_sampling_probs(
         const VCFData& data,
         const MatrixXi& allele_configs,
-        const vector<vector<vector<int>>>& ibd_states  // IBDTODO: we pass from new class
+        const vector<vector<vector<int>>>& ibd_states  // TODO: we pass from new class
         )
 {
     // Initialise
@@ -187,7 +65,7 @@ vector<MatrixXd> NaiveIBDModel::create_sampling_probs(
     return sampling_probs;
 }
 
-MatrixXd NaiveIBDModel::calc_transition_matrix(int d_ij, const Parameters& params)
+MatrixXd Model::calc_transition_matrix(int d_ij, const Parameters& params)
 {
     
     // Co-efficients
@@ -209,7 +87,7 @@ MatrixXd NaiveIBDModel::calc_transition_matrix(int d_ij, const Parameters& param
     return tran_matrix;
 }
 
-vector<MatrixXd> NaiveIBDModel::create_transition_matrices(
+vector<MatrixXd> Model::create_transition_matrices(
     const Parameters& params, 
     const VCFData& data
     )
@@ -263,13 +141,13 @@ vector<MatrixXd> NaiveIBDModel::create_transition_matrices(
 }
 
 
-double NaiveIBDModel::calc_logprior(const Particle& particle) const
+double Model::calc_logprior(const Particle& particle) const
 {
-    return 0;  // Uniform
+    return  lgamma(params.K);  // Uniform over unit simplex
 }
 
 
-double NaiveIBDModel::calc_loglikelihood(const Particle& particle) const
+double Model::calc_loglikelihood(const Particle& particle) const
 {
     // Get adjusted WSAF values based on proportions, error parameters
     // TODO: shouldn't allele configs just be a double?
@@ -307,8 +185,15 @@ double NaiveIBDModel::calc_loglikelihood(const Particle& particle) const
     return loglike;
 }
 
+
+double Model::calc_logposterior(const Particle& particle) const
+{
+    return calc_logprior(particle) + calc_loglikelihood(particle);
+}
+
+
 // Compute Viterbi path of IBD given proportions in a Particle
-ViterbiResult NaiveIBDModel::get_viterbi_path(const Particle& particle) const
+ViterbiResult Model::get_viterbi_path(const Particle& particle) const
 {
     // Compute error adjusted WSAF
     ArrayXd wsaf = (allele_configs.cast<double>() * particle.ws.transpose()).array();
@@ -361,7 +246,7 @@ ViterbiResult NaiveIBDModel::get_viterbi_path(const Particle& particle) const
 }
 
 
-void NaiveIBDModel::print() const
+void Model::print() const
 {
     std::cout << "Strains" << std::endl;
     for (int i=0; i<params.K; ++i) std::cout << ibd.strains[i] << "\t";
