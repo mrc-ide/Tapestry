@@ -23,8 +23,8 @@ private:
     {
         double beta;
         Particle* particle_ptr;
-        double loglikelihood;  // Needed for swaps; Thermodynamic Integration (TI)
-        double beta_logposterior;   // Needed for within-level MH updates
+        double loglike;
+        double logprior;
 
         TemperatureLevel();
     };
@@ -41,7 +41,7 @@ private:
     // FUNCTIONS
     std::vector<MCMC::TemperatureLevel>  static create_temp_levels(
         std::vector<Particle>& particles, 
-        double lambda=0.5
+        double beta_skew = 5.0
     );
 
     void run_iterations(int n);
@@ -55,7 +55,7 @@ public:
     const int n_burn_iters;                     // Number of burn-in iterations
     const int n_sample_iters;                   // Number of sampling iterations
     const int n_total_iters;
-    double acceptance_rate;                     // Accept rate until `ix`
+    double acceptance_rate_cumul;               // Cumulative acceptance rate until `ix`
     
     // Storage
     // TODO: is there a reason not to use Eigen for acceptance / logposterior?
@@ -63,7 +63,8 @@ public:
     // - Change to circular brackets
     // - Otherwise don't see issue
     std::vector<double> acceptance_trace;        // Rolling E[acceptance rate]
-    std::vector<double> logposterior_trace;     // Trace of log-posterior values
+    std::vector<double> loglike_trace;           // Trace of log-likelihood
+    std::vector<double> logprior_trace;          // Trace of log-prior
     std::vector<Particle> particle_trace;       // Trace of particles (i.e. updates)
 
     const int n_temps;                    // Number of temperature levels

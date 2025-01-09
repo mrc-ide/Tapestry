@@ -17,8 +17,6 @@ ModelCompare::ModelCompare(vector<ModelFit> model_fits, int n_data, vector<int> 
     n_data(n_data),
     Ks(Ks),
     n_Ks(Ks.size()),
-    n_params(Ks), // TODO: For now, maybe we need to derive something else here
-    // TODO: below are all correct size, but have 0s as values
     map_logvalues(n_Ks),
     AIC_values(n_Ks),
     BIC_values(n_Ks),
@@ -26,11 +24,12 @@ ModelCompare::ModelCompare(vector<ModelFit> model_fits, int n_data, vector<int> 
     f_ibds(n_Ks)
 {
     for (int j = 0; j < n_Ks; ++j) {
-        map_logvalues[j] = model_fits[j].logposterior;
-        AIC_values[j] = calc_AIC(n_params[j], map_logvalues[j]);
-        BIC_values[j] = calc_BIC(n_params[j], map_logvalues[j], n_data);
-        Keffs[j] = model_fits[j].Keff;
-        f_ibds[j] = model_fits[j].f_ibd;
+      double n_params = Ks[j] - 1;
+      map_logvalues[j] = model_fits[j].logposterior;
+      AIC_values[j] = calc_AIC(n_params, map_logvalues[j]);
+      BIC_values[j] = calc_BIC(n_params, map_logvalues[j], n_data);
+      Keffs[j] = model_fits[j].Keff;
+      f_ibds[j] = model_fits[j].f_ibd;
     }
 }
 
@@ -70,15 +69,19 @@ void ModelCompare::write_output(std::string output_csv)
 
 
 // --------------------------------------------------------------------------------
-// Compute model evidence using Thermodynamic Evidence
+// Compute model evidence using thermodynamic integration
 // --------------------------------------------------------------------------------
 
 
-ModelEvidence::ModelEvidence(const std::vector<std::unique_ptr<MCMC>>& mcmc_ptrs)
+ModelEvidence::ModelEvidence(const std::vector<std::unique_ptr<MCMC>>& mcmc_ptrs, vector<int> Ks)
   : n_mcmcs(mcmc_ptrs.size()),
   mcmc_ptrs(mcmc_ptrs),
   logevidences(ArrayXd::Constant(n_mcmcs, 0.0)),
-  posterior(ArrayXd::Constant(n_mcmcs, -9999.0))
+  posterior(ArrayXd::Constant(n_mcmcs, -9999.0)),
+  logevidences_v2(ArrayXd::Constant(n_mcmcs, 0.0)),
+  posterior_v2(ArrayXd::Constant(n_mcmcs, -9999.0)),
+  Ks(Ks),
+  n_Ks(Ks.size())
 {}
 
 
@@ -88,9 +91,6 @@ double ModelEvidence::integrate_numerically(ArrayXd xs, ArrayXd ys) const
     throw std::invalid_argument("For numeric integration x- and y-values must be same length.");
   }
 
-  // TODO: could also implement more explicitly using Eigen features
-  // TODO: note we are also assuming they are sorted, either ascending or descending
-  // TODO: what about space towards ZERO; this can have a lot of area.
   double area = 0;
   for (int i = 1; i < xs.size(); ++i) {
     double height = 0.5 * (ys(i) + ys(i-1));
@@ -123,16 +123,25 @@ void ModelEvidence::calc_logevidences()
 
     // Integrate the mean-loglikelihood from beta [0, 1] for the MCMC
     logevidences[j] = integrate_numerically(betas, meanloglikelihoods);
+
+    // Calculate new x- and y-values using transformed TI method, assuming beta raised to the power 2
+    ArrayXd betas_trans = pow(betas, 0.5);
+    ArrayXd meanloglikelihoods_trans = 2 * betas_trans * meanloglikelihoods;
+    logevidences_v2[j] = integrate_numerically(betas_trans, meanloglikelihoods_trans);
   }
 }
 
 
 void ModelEvidence::calc_posterior()
 {
-  // TODO: verify this is best way to handle underflow
   ArrayXd temp_vals = logevidences - logevidences.maxCoeff(); // preventing underflow
   posterior = temp_vals.exp();
   posterior /= posterior.sum();
+
+  // Same for transformed TI method
+  temp_vals = logevidences_v2 - logevidences_v2.maxCoeff();
+  posterior_v2 = temp_vals.exp();
+  posterior_v2 /= posterior_v2.sum();
 }
 
 
@@ -152,11 +161,13 @@ void ModelEvidence::write_output(std::string output_csv)
   }
 
   // TODO: Order assumed. Improve this output.
-  csv_file << "K,logevidence,posterior\n";
+  csv_file << "K,logevidence,posterior,logevidence_v2,posterior_v2\n";
   for (int j = 0; j < n_mcmcs; ++j) {
-    csv_file << j + 1 << ",";
+    csv_file << Ks[j] << ",";
     csv_file << logevidences[j] << ",";
-    csv_file << posterior[j] << "\n";
+    csv_file << posterior[j] << ",";
+    csv_file << logevidences_v2[j] << ",";
+    csv_file << posterior_v2[j] << "\n";
   }
 
   csv_file.close();

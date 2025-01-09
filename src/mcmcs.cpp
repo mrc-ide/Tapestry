@@ -32,9 +32,10 @@ MCMC::MCMC(
     n_burn_iters(100),
     n_sample_iters(900),
     n_total_iters(n_burn_iters + n_sample_iters),
-    acceptance_rate(-1.0),
+    acceptance_rate_cumul(0.0),
     acceptance_trace(n_total_iters),
-    logposterior_trace(n_total_iters),
+    loglike_trace(n_total_iters),
+    logprior_trace(n_total_iters),
     particle_trace(n_total_iters, params.K),  // TODO: Here is where space gets allocated. Double check.
     n_temps(n_temps),
     swap_freq(10),  // For now just set as constant
@@ -64,11 +65,12 @@ void MCMC::write_output(
     if (!csv_file.is_open()) {
         throw std::invalid_argument("Could not open output file.");
     }
-    csv_file << "iter,phase,logposterior,acceptance_rate\n";
+    csv_file << "iter,phase,loglike,logprior,acceptance_rate\n";
     for (int i = 0; i < ix; ++i) {
         csv_file << i << ",";
         csv_file << (i < n_burn_iters ? "burn" : "sample") << ","; 
-        csv_file << logposterior_trace[i] << ",";
+        csv_file << loglike_trace[i] << ",";
+        csv_file << logprior_trace[i] << ",";
         csv_file << acceptance_trace[i] << "\n";
     }
     csv_file.close();
@@ -123,40 +125,42 @@ void MCMC::write_output(
 
 Particle MCMC::get_map_particle() const
 {
-    // NB: we exclude the burn-in
-    auto mapIter = std::max_element(
-        logposterior_trace.begin() + n_burn_iters, 
-        logposterior_trace.end()
-    );
-    int ix = std::distance(logposterior_trace.begin(), mapIter);
-    
-    return particle_trace[ix];
+    // Find iteration that achieved the highest joint probability
+    int i_max = 0;
+    double logjoint_max = loglike_trace[0] + logprior_trace[0];
+    for (int i = 0; i < loglike_trace.size(); ++i) {
+        double logjoint = loglike_trace[i] + logprior_trace[i];
+        if (logjoint > logjoint_max) {
+            i_max = i;
+            logjoint_max = logjoint;
+        }
+    }
+
+    return particle_trace[i_max];
 }
 
 
 MCMC::TemperatureLevel::TemperatureLevel()
     : beta(0.0),
     particle_ptr(NULL),
-    loglikelihood(-9999),
-    beta_logposterior(-9999)
+    loglike(-9999),
+    logprior(-9999)
 {}
 
 
 std::vector<MCMC::TemperatureLevel> MCMC::create_temp_levels(
     std::vector<Particle>& particles, 
-    double lambda)
+    double beta_skew)
 {
 
     // Initialise
     int n_temps = particles.size();
     std::vector<MCMC::TemperatureLevel> temp_levels(n_temps);
 
-    // Populate
-    double beta = 1.0;
-    for (int j = n_temps - 1; j >= 0; --j) {
+    // Populate with a sequence from 0 to 1, raised to the power beta_skew
+    for (int j = 0; j < n_temps; ++j) {
         temp_levels[j].particle_ptr = &particles[j];
-        temp_levels[j].beta = beta;
-        beta *= lambda;
+        temp_levels[j].beta = pow(j / double(n_temps - 1), beta_skew);
     }
 
     return temp_levels;
@@ -168,14 +172,15 @@ void MCMC::run_burn()
     // Initialise
     for (int j = 0; j < n_temps; ++j) {
         particles[j] = proposal_engine.create_particle();
-        temps[j].loglikelihood = model.calc_loglikelihood(particles[j]);
-        temps[j].beta_logposterior = temps[j].beta * temps[j].loglikelihood + model.calc_logprior(particles[j]);
+        temps[j].loglike = model.calc_loglikelihood(particles[j]);
+        temps[j].logprior = model.calc_logprior(particles[j]);
     }
     // Store cold chain
     particle_trace[ix] = *temps[n_temps - 1].particle_ptr;
-    logposterior_trace[ix] = temps[n_temps - 1].beta_logposterior;
-    acceptance_rate = 1.0;
-    acceptance_trace[ix] = acceptance_rate;
+    loglike_trace[ix] = temps[n_temps - 1].loglike;
+    logprior_trace[ix] = temps[n_temps - 1].logprior;
+    acceptance_rate_cumul = 1.0;
+    acceptance_trace[ix] = 1.0;
     ++ix;
 
     run_iterations(n_burn_iters - 1);
@@ -199,44 +204,45 @@ void MCMC::run_iterations(int n)
 
             // Propose a particle
             TemperatureLevel& temp_level = temps[j];
-            Particle proposed_particle = proposal_engine.propose_particle(*temp_level.particle_ptr);  // TODO: does this work?
+            Particle proposed_particle = proposal_engine.propose_particle(*temp_level.particle_ptr, params.w_proposal_sd);
 
-            // Compute proposed likelihood and posterior
-            double proposed_loglikelihood = model.calc_loglikelihood(proposed_particle);
-            double proposed_logposterior = temp_level.beta * proposed_loglikelihood + model.calc_logprior(proposed_particle);
+            // Compute proposed likelihood and prior
+            double proposed_loglike = model.calc_loglikelihood(proposed_particle);
+            double proposed_logprior = model.calc_logprior(proposed_particle);
 
-            // Compute acceptance rate
-            double A = proposed_logposterior - temp_level.beta_logposterior; // TODO: Not that this way, it is not E[acceptance]
+            // Compute acceptance rate under power-posterior
+            double A = temp_level.beta * (proposed_loglike - temp_level.loglike) + (proposed_logprior - temp_level.logprior);
             double u = std::log(U(rng.engine));
 
             // Accept
             if (u < A) {
                 *temp_level.particle_ptr = proposed_particle;  // change the particle's value
-                temp_level.loglikelihood = proposed_loglikelihood;
-                temp_level.beta_logposterior = proposed_logposterior;
-                ++acceptance_rate;
+                temp_level.loglike = proposed_loglike;
+                temp_level.logprior = proposed_logprior;
             }
 
             // Store the loglikelihood for TI
-            loglikelihoods(ix, j) = temp_level.loglikelihood;
+            loglikelihoods(ix, j) = temp_level.loglike;
+
+            // Track expected acceptance rate in cold chain
+            if (j == (n_temps - 1)) {
+                acceptance_rate_cumul += (A < 0.0 ? std::exp(A) : 1.0);
+            }
         }
 
         // Between-temperature swaps
         if (ix % swap_freq == 0) {
             for (int j = 1; j < n_temps; ++j) {
-                double a1 = (temps[j].beta - temps[j-1].beta) * temps[j-1].loglikelihood;
-                double a2 = (temps[j-1].beta - temps[j].beta) * temps[j].loglikelihood;
+                double a1 = (temps[j].beta - temps[j-1].beta) * temps[j-1].loglike;
+                double a2 = (temps[j-1].beta - temps[j].beta) * temps[j].loglike;
                 double A = a1 + a2;
                 double u = std::log(U(rng.engine));
                 
                 // Accept
                 if (u < A) {
                     std::swap(temps[j].particle_ptr, temps[j-1].particle_ptr);
-                    std::swap(temps[j].loglikelihood, temps[j-1].loglikelihood);
-
-                    // Recompute
-                    temps[j].beta_logposterior = temps[j].beta * temps[j].loglikelihood + model.calc_logprior(*temps[j].particle_ptr);
-                    temps[j-1].beta_logposterior = temps[j-1].beta * temps[j-1].loglikelihood + model.calc_logprior(*temps[j-1].particle_ptr);
+                    std::swap(temps[j].loglike, temps[j-1].loglike);
+                    std::swap(temps[j].logprior, temps[j-1].logprior);
 
                     // Increment if swapped
                     ++n_swaps(j-1);
@@ -250,8 +256,9 @@ void MCMC::run_iterations(int n)
 
         // Store cold chain for this iteration
         particle_trace[ix] = *temps[n_temps - 1].particle_ptr;
-        logposterior_trace[ix] = temps[n_temps - 1].beta_logposterior;
-        acceptance_trace[ix] = acceptance_rate / (n_temps*ix); // TODO: just average over all chains, should be cold!
+        loglike_trace[ix] = temps[n_temps - 1].loglike;
+        logprior_trace[ix] = temps[n_temps - 1].logprior;
+        acceptance_trace[ix] = acceptance_rate_cumul / double(ix + 1);
     }
 }
 

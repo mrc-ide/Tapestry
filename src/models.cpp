@@ -143,7 +143,7 @@ vector<MatrixXd> Model::create_transition_matrices(
 
 double Model::calc_logprior(const Particle& particle) const
 {
-    return 0;  // Uniform
+    return  lgamma(params.K);  // Uniform over unit simplex
 }
 
 
