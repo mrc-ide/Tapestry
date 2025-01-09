@@ -11,7 +11,6 @@
 
 // ================================================================================
 // Interface for different MCMC methods
-//
 // ================================================================================
 
 
@@ -115,7 +114,7 @@ private:
 
     std::vector<ParallelTempering::TemperatureLevel>  static create_temp_levels(
         std::vector<Particle>& particles, 
-        double lambda=0.5
+        double beta_skew = 5.0
     );
 
     void run_iterations(int n);

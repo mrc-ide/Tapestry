@@ -27,7 +27,6 @@ private:
     // Model associated
     std::vector<int> Ks;
     int n_Ks;
-    std::vector<int> n_params;
 
     // Maximum aposteriori associated
     // All of the below should go into a struct
@@ -48,27 +47,25 @@ public:
 
 
 // --------------------------------------------------------------------------------
-// Compute model evidence using Thermodynamic Evidence
+// Compute model evidence using thermodynamic integration
 // --------------------------------------------------------------------------------
 
-
-/* Compute model evidence using Thermodynamic Integration
-*
-* Note that another implementation would work with just a single MCMC chain,
-* and then the comparison part could occur with outputs from processing
-* a single chain
-*
-*/
 class ModelEvidence
 {
 private:
+    // Model associated
+    std::vector<int> Ks;
+    int n_Ks;
+
     // Pointer to vector of ParallelTempering MCMCs
     int n_mcmcs;
     const std::vector<std::unique_ptr<ParallelTempering>>& mcmc_ptrs;
 
     // Computed
     ArrayXd logevidences;       // The log-evidence P(model|data) for each MCMC
-    ArrayXd posterior;          // 
+    ArrayXd posterior;          // Transformed out of log space and normalized to sum to one
+    ArrayXd logevidences_v2;    // Uses transformed version of path by raising beta to a power
+    ArrayXd posterior_v2;       // Posterior for logevidences_v2 method
 
     /* Numerical integration using the Trapezoidal Method
     *
@@ -76,7 +73,6 @@ private:
     *  be passed. These (x, y) pairs should be sorted by x-value.
     *  Post: Approximate area under the curve of y.
     *
-    *  TODO: not doing extrapolation yet.
     */
     double integrate_numerically(ArrayXd xs, ArrayXd ys) const;
     ArrayXd calc_meanloglikelihoods(const ParallelTempering& mcmc) const;
@@ -91,7 +87,7 @@ private:
     void calc_posterior();
 
 public:
-    ModelEvidence(const std::vector<std::unique_ptr<ParallelTempering>>& mcmc_ptrs);
+    ModelEvidence(const std::vector<std::unique_ptr<ParallelTempering>>& mcmc_ptrs, vector<int> Ks);
 
     /* Interface method; compute the log-evidences annd
     *  the posterior

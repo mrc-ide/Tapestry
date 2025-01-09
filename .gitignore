@@ -25,3 +25,5 @@ src/dev*
 dev*
 images/*.ai
 TODO.txt
+/ignore
+.Rproj.user

@@ -53,7 +53,7 @@ int main(int argc, char* argv[])
     int n_pi_bins = 1000;           // No. of WSAF bins in betabinomial lookup
     
     // MCMC parameters
-    double w_proposal_sd = 0.1;     // Titres sampled from ~N(0, w_propsal_sd)
+    double w_proposal_sd = 1.0;     // Drawing from reflected normal
     int n_temps = 5;                // Number of temperature levels for PT-MCMC
 
     // OPTIONS
@@ -99,7 +99,7 @@ int main(int argc, char* argv[])
                 ->check(CLI::PositiveNumber);
     cmd_infer->add_option("-t, --temps", n_temps, "Number of temperature levels in PT-MCMC.")
                 ->group("MCMC Parameters")
-                ->check(CLI::Range(5, 20));
+                ->check(CLI::Range(5, 100));
 
     // Parse
     CLI11_PARSE(app, argc, argv);
@@ -140,6 +140,7 @@ int main(int argc, char* argv[])
         std::vector<std::unique_ptr<ParallelTempering>> mcmc_ptrs;
         mcmc_ptrs.reserve(Ks.size());
         for (int k : Ks) {
+            cout << "K = " << k << endl;
 
             // Define output directory
             string K_output_dir = output_dir + "/K" + std::to_string(k);
@@ -148,20 +149,20 @@ int main(int argc, char* argv[])
             Parameters params(k, e_0, e_1, v, rho, G, w_proposal_sd, n_pi_bins);
             ProposalEngine proposal_engine(params);
             NaiveIBDModel model(params, data); // TODO: Stop recreating BetabinArray 
-            model.print();
+            //model.print();
 
             // Create MCMC on the heap
-            cout << "Runnning MCMC..." << endl;
+            cout << "  Runnning MCMC..." << endl;
             mcmc_ptrs.emplace_back(std::make_unique<ParallelTempering>(params, model, proposal_engine, n_temps));
             mcmc_ptrs.back()->run();
 
             // Write MCMC outputs
-            cout << "Writing MCMC outputs..." << endl;
+            cout << "  Writing MCMC outputs..." << endl;
             ProportionParticleWriter particle_writer;
             mcmc_ptrs.back()->write_output(K_output_dir, particle_writer);
 
             // Fitting
-            cout << "Fitting..." << endl;
+            cout << "  Fitting..." << endl;
             Particle map_particle = mcmc_ptrs.back()->get_map_particle();
             std::sort(map_particle.ws.begin(), map_particle.ws.end());
             ViterbiResult viterbi = model.get_viterbi_path(map_particle);
@@ -173,9 +174,9 @@ int main(int argc, char* argv[])
                 map_particle.ws,
                 viterbi.path
             );
-            cout << "Writing fit outputs..." << endl;
+            cout << "  Writing fit outputs..." << endl;
             model_fit.write_output(K_output_dir);
-            cout << "Done." << endl;
+            cout << "Done" << endl;
 
             // Store the fits
             model_fits.push_back(model_fit);
@@ -190,15 +191,15 @@ int main(int argc, char* argv[])
         );
         string output_csv = output_dir + "/compare.heuristics.csv";
         model_compare.write_output(output_csv);
-        cout << "Done." << endl;
+        cout << "Done" << endl;
 
         // Compute model evidence
         std::cout << "Computing model evidence..." << std::endl;
-        ModelEvidence model_evidence(mcmc_ptrs);
+        ModelEvidence model_evidence(mcmc_ptrs, Ks);
         model_evidence.calc_summary();
         std::string evidence_csv = output_dir + "/compare.evidence.csv";
         model_evidence.write_output(evidence_csv);
-        std::cout << "Done." << std::endl;
+        std::cout << "Done" << std::endl;
 
     } else {
         // Throw an exception 

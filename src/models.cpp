@@ -106,7 +106,7 @@ MatrixXd NoIBDModel::create_sampling_probs(
 
 double NoIBDModel::calc_logprior(const Particle& particle) const
 {
-    return 0;  // Uniform
+    return  lgamma(params.K);  // Uniform over unit simplex
 }
 
 
@@ -266,7 +266,7 @@ vector<MatrixXd> NaiveIBDModel::create_transition_matrices(
 
 double NaiveIBDModel::calc_logprior(const Particle& particle) const
 {
-    return 0;  // Uniform
+    return  lgamma(params.K);  // Uniform over unit simplex
 }
 
 

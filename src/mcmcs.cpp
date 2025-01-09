@@ -146,7 +146,7 @@ void MetropolisHastings::run_iterations(int n)
     for (; ix < N; ++ix) {
 
         // Propose
-        Particle proposed_particle = proposal_engine.propose_particle(particle);
+        Particle proposed_particle = proposal_engine.propose_particle(particle, params.w_proposal_sd);
         double proposed_logposterior = model.calc_logposterior(proposed_particle);
 
         // Compute acceptance probability
@@ -212,7 +212,7 @@ ParallelTempering::TemperatureLevel::TemperatureLevel()
 
 std::vector<ParallelTempering::TemperatureLevel> ParallelTempering::create_temp_levels(
     std::vector<Particle>& particles, 
-    double lambda)
+    double beta_skew)
 {
 
     // Initialise
@@ -220,11 +220,9 @@ std::vector<ParallelTempering::TemperatureLevel> ParallelTempering::create_temp_
     std::vector<ParallelTempering::TemperatureLevel> temp_levels(n_temps);
 
     // Populate
-    double beta = 1.0;
-    for (int j = n_temps - 1; j >= 0; --j) {
+    for (int j = 0; j < n_temps; ++j) {
         temp_levels[j].particle_ptr = &particles[j];
-        temp_levels[j].beta = beta;
-        beta *= lambda;
+        temp_levels[j].beta = pow(j / double(n_temps - 1), beta_skew);
     }
 
     return temp_levels;
@@ -267,21 +265,21 @@ void ParallelTempering::run_iterations(int n)
 
             // Propose a particle
             TemperatureLevel& temp_level = temps[j];
-            Particle proposed_particle = proposal_engine.propose_particle(*temp_level.particle_ptr);  // TODO: does this work?
+            Particle proposed_particle = proposal_engine.propose_particle(*temp_level.particle_ptr, params.w_proposal_sd);
 
             // Compute proposed likelihood and posterior
             double proposed_loglikelihood = model.calc_loglikelihood(proposed_particle);
-            double proposed_logposterior = temp_level.beta * proposed_loglikelihood + model.calc_logprior(proposed_particle);
+            double proposed_beta_logposterior = temp_level.beta * proposed_loglikelihood + model.calc_logprior(proposed_particle);
 
             // Compute acceptance rate
-            double A = proposed_logposterior - temp_level.beta_logposterior; // TODO: Not that this way, it is not E[acceptance]
+            double A = proposed_beta_logposterior - temp_level.beta_logposterior; // TODO: Not that this way, it is not E[acceptance]
             double u = std::log(U(rng.engine));
 
             // Accept
             if (u < A) {
                 *temp_level.particle_ptr = proposed_particle;  // change the particle's value
                 temp_level.loglikelihood = proposed_loglikelihood;
-                temp_level.beta_logposterior = proposed_logposterior;
+                temp_level.beta_logposterior = proposed_beta_logposterior;
                 ++acceptance_rate;
             }
 
