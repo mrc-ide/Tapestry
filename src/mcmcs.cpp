@@ -33,7 +33,7 @@ MCMC::MCMC(
     n_burn_iters(100),
     n_sample_iters(900),
     n_total_iters(n_burn_iters + n_sample_iters),
-    acceptance_rate(-1.0),
+    acceptance_rate_cumul(0.0),
     acceptance_trace(n_total_iters),
     loglike_trace(n_total_iters),
     logprior_trace(n_total_iters),
@@ -121,7 +121,7 @@ void MetropolisHastings::run_burn()
     particle_trace[ix] = proposal_engine.create_particle();
     loglike_trace[ix] = model.calc_loglikelihood(particle_trace[ix]);
     logprior_trace[ix] = model.calc_logprior(particle_trace[ix]);
-    acceptance_rate = 1.0;
+    acceptance_rate_cumul = 1.0;
     acceptance_trace[ix] = 1.0;
     ++ix;
 
@@ -158,8 +158,8 @@ void MetropolisHastings::run_iterations(int n)
         double proposed_logprior = model.calc_logprior(proposed_particle);
 
         // Compute acceptance probability
-        double A = std::exp((proposed_loglike + proposed_logprior) - (loglike + logprior)); 
-        double u = U(rng.engine);
+        double A = (proposed_loglike + proposed_logprior) - (loglike + logprior); 
+        double u = std::log(U(rng.engine));
 
         // Accept
         if (u < A) {
@@ -174,8 +174,8 @@ void MetropolisHastings::run_iterations(int n)
         logprior_trace[ix] = logprior;
 
         // Track expected acceptance rate
-        acceptance_rate += (A < 1.0 ? A : 1.0);
-        acceptance_trace[ix] = acceptance_rate / ix;
+        acceptance_rate_cumul += (A < 0.0 ? std::exp(A) : 1.0);
+        acceptance_trace[ix] = acceptance_rate_cumul / double(ix + 1);
     }
 }
 
@@ -226,7 +226,7 @@ std::vector<ParallelTempering::TemperatureLevel> ParallelTempering::create_temp_
     int n_temps = particles.size();
     std::vector<ParallelTempering::TemperatureLevel> temp_levels(n_temps);
 
-    // Populate
+    // Populate with a sequence from 0 to 1, raised to the power beta_skew
     for (int j = 0; j < n_temps; ++j) {
         temp_levels[j].particle_ptr = &particles[j];
         temp_levels[j].beta = pow(j / double(n_temps - 1), beta_skew);
@@ -249,8 +249,8 @@ void ParallelTempering::run_burn()
     particle_trace[ix] = *temps[n_temps - 1].particle_ptr;
     loglike_trace[ix] = temps[n_temps - 1].loglike;
     logprior_trace[ix] = temps[n_temps - 1].logprior;
-    acceptance_rate = 1.0;
-    acceptance_trace[ix] = acceptance_rate;
+    acceptance_rate_cumul = 1.0;
+    acceptance_trace[ix] = 1.0;
     ++ix;
 
     run_iterations(n_burn_iters - 1);
@@ -289,11 +289,15 @@ void ParallelTempering::run_iterations(int n)
                 *temp_level.particle_ptr = proposed_particle;  // change the particle's value
                 temp_level.loglike = proposed_loglike;
                 temp_level.logprior = proposed_logprior;
-                ++acceptance_rate;
             }
 
             // Store the loglikelihood for TI
             loglikelihoods(ix, j) = temp_level.loglike;
+
+            // Track expected acceptance rate in cold chain
+            if (j == (n_temps - 1)) {
+                acceptance_rate_cumul += (A < 0.0 ? std::exp(A) : 1.0);
+            }
         }
 
         // Between-temperature swaps
@@ -324,7 +328,7 @@ void ParallelTempering::run_iterations(int n)
         particle_trace[ix] = *temps[n_temps - 1].particle_ptr;
         loglike_trace[ix] = temps[n_temps - 1].loglike;
         logprior_trace[ix] = temps[n_temps - 1].logprior;
-        acceptance_trace[ix] = acceptance_rate / (n_temps * ix); // TODO: just average over all chains, should be cold!
+        acceptance_trace[ix] = acceptance_rate_cumul / double(ix + 1);
     }
 }
 

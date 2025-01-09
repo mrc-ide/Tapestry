@@ -33,7 +33,7 @@ public:
     const int n_burn_iters;                     // Number of burn-in iterations
     const int n_sample_iters;                   // Number of sampling iterations
     const int n_total_iters;
-    double acceptance_rate;                     // Accept rate until `ix`
+    double acceptance_rate_cumul;               // Cumulative acceptance rate until `ix`
     
     // Storage
     // TODO: is there a reason not to use Eigen for these vectors instead of std::vector?
