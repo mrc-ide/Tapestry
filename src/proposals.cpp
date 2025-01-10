@@ -109,7 +109,7 @@ ProposalEngine_titre::ProposalEngine_titre(const Parameters& params)
     beta(1.0),
     gamma_dist(alpha, beta),
     unif_dist(0, params.K - 1),
-    norm_dist(0, params.w_proposal_sd)
+    norm_dist(0, 1.0)
 {};
 
 
@@ -131,7 +131,7 @@ Particle ProposalEngine_titre::create_particle()
 }
 
 
-Particle ProposalEngine_titre::propose_particle(const Particle& particle)
+Particle ProposalEngine_titre::propose_particle(const Particle& particle, const double w_prop_sd)
 {
     // Sample a strain index to update
     int ix = unif_dist(rng.engine);
@@ -139,8 +139,8 @@ Particle ProposalEngine_titre::propose_particle(const Particle& particle)
     // Convert to real numbers by log transforming
     // and update by adding a normal variate ~N(0, w_proposal_sd)
     RowVectorXd proposed_ws = particle.ws;
-    double titre = log(proposed_ws(ix));  // TODO: what base should I use?
-    titre += norm_dist(rng.engine);
+    double titre = log(proposed_ws(ix));
+    titre += w_prop_sd * norm_dist(rng.engine);
     proposed_ws(ix) = exp(titre);
 
     // Normalise
