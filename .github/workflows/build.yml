@@ -16,9 +16,10 @@ jobs:
           submodules: true  # HTSlib uses 'htscodecs' as a submodule
           repository: samtools/htslib
           path: htslib
-      
+
       - name: Build and install HTSlib
         run: |
+          sudo apt-get update && sudo apt-get install -y libbz2-dev
           cd htslib
           autoreconf -i
           ./configure --prefix ${{github.workspace}}/htslib
