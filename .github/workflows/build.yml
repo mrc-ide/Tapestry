@@ -19,7 +19,7 @@ jobs:
 
       - name: Build and install HTSlib
         run: |
-          sudo apt-get update && sudo apt-get install -y libbz2-dev
+          sudo apt-get update && sudo apt-get install -y libbz2-dev liblzma-dev
           cd htslib
           autoreconf -i
           ./configure --prefix ${{github.workspace}}/htslib
