@@ -29,8 +29,13 @@ private:
         }
     };
 
-    const Parameters& params;
+    //const Parameters& params;
     const VCFData& data;
+    const int n_pi_bins;    // Number of bins to approximate
+    const double e_0;       // REF->ALT error rate
+    const double e_1;       // ALT->REF error rate
+    const double v;         // Overdispersion parameter
+    
 
     MatrixXd lookup_matrix;
     const pair<int, int> missing_pair{MISSING_AD_VALUE, MISSING_AD_VALUE};
@@ -41,8 +46,23 @@ public:
 
     const bool as_loglikelihood; // defaults to true, first constructor
 
-    BetabinomialArray(const Parameters& params, const VCFData& data);
-    BetabinomialArray(const Parameters& params, const VCFData& data, bool as_loglikelihood);
+    // BetabinomialArray(const Parameters& params, const VCFData& data);
+    // BetabinomialArray(const Parameters& params, const VCFData& data, bool as_loglikelihood);
+
+    BetabinomialArray(
+        const VCFData& data, 
+        const int n_pi_bins, 
+        const double e_0, 
+        const double e_1, 
+        const double v);
+    BetabinomialArray(
+        const VCFData& data, 
+        const int n_pi_bins, 
+        const double e_0, 
+        const double e_1, 
+        const double v,
+        bool as_loglikelihood
+        );
 
     /*
     * The () operator is overloaded to act like Eigen array indices, e.g.

@@ -65,6 +65,7 @@ public:
 
     // Constructors
     Model(const Parameters& params, const VCFData& data);
+    Model(const Parameters& params, const VCFData& data, const BetabinomialArray& betabin_loopup);
 
     /*
     * Calculate the log prior probability, 

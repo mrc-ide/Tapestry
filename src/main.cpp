@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include "libs/cli11/CLI11.hpp"
+#include "betabin.hpp"
 #include "data.hpp"
 #include "ibd.hpp"
 #include "io.hpp"
@@ -125,6 +126,10 @@ int main(int argc, char* argv[])
         VCFData data(input_vcf, sample_name);
         data.print();
 
+        // Make beta-binomial array
+        // TODO: no clear performance improvement compared with generating each iteration; runs in ms.
+        BetabinomialArray betabin_lookup(data, n_pi_bins, e_0, e_1, v, false);
+
         // Setup of Ks vector
         std::vector<int> Ks(1, K); 
         if (K == -1) { // iterate over multiple K values
@@ -148,7 +153,7 @@ int main(int argc, char* argv[])
             // Create objects for this COI
             Parameters params(k, e_0, e_1, v, rho, G, w_proposal_sd, n_pi_bins);
             ProposalEngine proposal_engine(params);
-            Model model(params, data); // TODO: Stop recreating BetabinArray 
+            Model model(params, data, betabin_lookup);
             //model.print();
 
             // Create MCMC on the heap

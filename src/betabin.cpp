@@ -9,35 +9,72 @@
 using namespace std;
 
 
-BetabinomialArray::BetabinomialArray(const Parameters& params, const VCFData& data)
-    : params(params),
-    data(data),
+// BetabinomialArray::BetabinomialArray(const Parameters& params, const VCFData& data)
+//     : params(params),
+//     data(data),
+//     as_loglikelihood(true),
+//     lookup_matrix(MatrixXd::Constant(data.n_sites, params.n_pi_bins, DEFAULT_FLOAT))
+// {
+//     calc_lookup_matrix(as_loglikelihood);
+//     check_valid();
+// };
+
+
+// BetabinomialArray::BetabinomialArray(const Parameters& params, const VCFData& data, bool as_loglikelihood)
+//     : params(params),
+//     data(data),
+//     as_loglikelihood(as_loglikelihood),
+//     lookup_matrix(MatrixXd::Constant(data.n_sites, params.n_pi_bins, DEFAULT_FLOAT))
+// {
+//     calc_lookup_matrix(as_loglikelihood);
+//     check_valid();
+// };
+
+
+BetabinomialArray::BetabinomialArray(
+        const VCFData& data, 
+        const int n_pi_bins, 
+        const double e_0, 
+        const double e_1, 
+        const double v)
+    : data(data),
+    n_pi_bins(n_pi_bins),
+    e_0(e_0),
+    e_1(e_1),
+    v(v),
     as_loglikelihood(true),
-    lookup_matrix(MatrixXd::Constant(data.n_sites, params.n_pi_bins, DEFAULT_FLOAT))
+    lookup_matrix(MatrixXd::Constant(data.n_sites, n_pi_bins, DEFAULT_FLOAT))
 {
     calc_lookup_matrix(as_loglikelihood);
     check_valid();
 };
 
-
-BetabinomialArray::BetabinomialArray(const Parameters& params, const VCFData& data, bool as_loglikelihood)
-    : params(params),
-    data(data),
+BetabinomialArray::BetabinomialArray(
+        const VCFData& data, 
+        const int n_pi_bins, 
+        const double e_0, 
+        const double e_1, 
+        const double v,
+        bool as_loglikelihood)
+    : data(data),
+    n_pi_bins(n_pi_bins),
+    e_0(e_0),
+    e_1(e_1),
+    v(v),
     as_loglikelihood(as_loglikelihood),
-    lookup_matrix(MatrixXd::Constant(data.n_sites, params.n_pi_bins, DEFAULT_FLOAT))
+    lookup_matrix(MatrixXd::Constant(data.n_sites, n_pi_bins, DEFAULT_FLOAT))
 {
     calc_lookup_matrix(as_loglikelihood);
     check_valid();
 };
-
 
 void BetabinomialArray::calc_lookup_matrix(bool as_loglikelihood)
 {
 
     // Create array of error adjusted WSAF, at which we will precompute probs from Betabin
     ArrayXd pi_bin_midpoints = ArrayXd::LinSpaced(
-        params.n_pi_bins, 
-        params.e_0, 1 - params.e_1
+        n_pi_bins, 
+        e_0, 1 - e_1
         ); // TODO: double check length
 
     // Iterate over all (REF, ALT) pairs
@@ -68,12 +105,12 @@ void BetabinomialArray::calc_lookup_matrix(bool as_loglikelihood)
         // TODO: is this math construction best?
         // TODO: Here is where we are computing the likelihood;
         double tmp0 = lgamma(data.alts(i) + data.refs(i) + 1) - lgamma(data.alts(i) + 1) - lgamma(data.refs(i) + 1);
-        double tmp1 = lgamma(params.v) - lgamma(data.alts(i) + data.refs(i) + params.v);
+        double tmp1 = lgamma(v) - lgamma(data.alts(i) + data.refs(i) + v);
 
-        for (int j = 0; j < params.n_pi_bins; ++j) {
+        for (int j = 0; j < n_pi_bins; ++j) {
             double pi = pi_bin_midpoints[j];
-            double tmp2 = lgamma(data.alts(i) + pi * params.v) - lgamma(pi * params.v);
-            double tmp3 = lgamma(data.refs(i) + (1.0 - pi) * params.v) - lgamma((1.0 - pi) * params.v);
+            double tmp2 = lgamma(data.alts(i) + pi * v) - lgamma(pi * v);
+            double tmp3 = lgamma(data.refs(i) + (1.0 - pi) * v) - lgamma((1.0 - pi) * v);
 
             if (as_loglikelihood) {
                 lookup_matrix(i, j) = tmp0 + tmp1 + tmp2 + tmp3;
@@ -107,7 +144,7 @@ double BetabinomialArray::operator()(int locus, double pi_val) const
     // Using the params reference might also slow down
 
     int ix = round(
-        (params.n_pi_bins - 1) / (1 - params.e_1 - params.e_0) * (pi_val - params.e_0)
+        (n_pi_bins - 1) / (1 - e_1 - e_0) * (pi_val - e_0)
     );
     
     return lookup_matrix(locus, ix);
@@ -116,7 +153,7 @@ double BetabinomialArray::operator()(int locus, double pi_val) const
 MatrixXd BetabinomialArray::subset(ArrayXd pi_vals) const
 {
     ArrayXi indices = (
-        (params.n_pi_bins - 1) / (1 - params.e_1 - params.e_0) * (pi_vals - params.e_0)
+        (n_pi_bins - 1) / (1 - e_1 - e_0) * (pi_vals - e_0)
     ).round().cast<int>();
     
     return lookup_matrix(Eigen::all, indices);
