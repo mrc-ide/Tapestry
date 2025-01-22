@@ -24,13 +24,15 @@ MCMC::MCMC(
     const Parameters& params,
     const Model& model,
     ProposalEngine& proposal_engine,
+    int n_burn_iters,
+    int n_sample_iters,
     int n_temps) 
     : params(params),
     model(model),
     proposal_engine(proposal_engine),
     ix(0),
-    n_burn_iters(100),
-    n_sample_iters(900),
+    n_burn_iters(n_burn_iters),
+    n_sample_iters(n_sample_iters),
     n_total_iters(n_burn_iters + n_sample_iters),
     acceptance_rate_cumul(0.0),
     acceptance_trace(n_total_iters),
@@ -38,14 +40,158 @@ MCMC::MCMC(
     logprior_trace(n_total_iters),
     particle_trace(n_total_iters, params.K),  // TODO: Here is where space gets allocated. Double check.
     n_temps(n_temps),
-    swap_freq(10),  // For now just set as constant
+    swap_freq(params.swap_freq),
     particles(n_temps),  // Not exactly sure how this looks
     temps(create_temp_levels(particles)),
     loglikelihoods(MatrixXd::Constant(n_total_iters, n_temps, -9999)),
-    n_swap_attempts(0.0),
-    n_swaps(ArrayXd::Constant(n_temps - 1, 0.0)),
+    n_swap_attempts(0),
+    swap_rate_cumul(ArrayXd::Constant(n_temps - 1, 0.0)),
     swap_rates(MatrixXd::Constant(n_total_iters, n_temps - 1, 0.0))
 {};
+
+
+MCMC::TemperatureLevel::TemperatureLevel()
+    : beta(0.0),
+    particle_ptr(NULL),
+    loglike(-9999),
+    logprior(-9999),
+    w_prop_sd(1.0)
+{}
+
+
+std::vector<MCMC::TemperatureLevel> MCMC::create_temp_levels(
+    std::vector<Particle>& particles, 
+    double beta_skew)
+{
+
+    // Initialise
+    int n_temps = particles.size();
+    std::vector<MCMC::TemperatureLevel> temp_levels(n_temps);
+
+    // Assign particle pointers and set beta values for each rung
+    // beta values follow a linear sequence from 0 to 1, raised to the power beta_skew
+    for (int j = 0; j < n_temps; ++j) {
+        temp_levels[j].particle_ptr = &particles[j];
+        temp_levels[j].beta = pow(j / double(n_temps - 1), beta_skew);
+    }
+
+    return temp_levels;
+}
+
+void MCMC::run()
+{
+    run_burn();
+    run_sampling();
+}
+
+void MCMC::run_burn()
+{
+    // Initialise
+    for (int j = 0; j < n_temps; ++j) {
+        particles[j] = proposal_engine.create_particle();
+        temps[j].loglike = model.calc_loglikelihood(particles[j]);
+        temps[j].logprior = model.calc_logprior(particles[j]);
+
+        // Store the loglikelihood for TI
+        loglikelihoods(ix, j) = temps[j].loglike;
+    }
+    
+    // Store cold chain
+    particle_trace[ix] = *temps[n_temps - 1].particle_ptr;
+    loglike_trace[ix] = temps[n_temps - 1].loglike;
+    logprior_trace[ix] = temps[n_temps - 1].logprior;
+    acceptance_rate_cumul = 1.0;
+    acceptance_trace[ix] = 1.0;
+    ++ix;
+
+    run_iterations(n_burn_iters - 1, true);
+}
+
+
+void MCMC::run_sampling()
+{
+    run_iterations(n_sample_iters);
+}
+
+
+void MCMC::run_iterations(int n, bool adaptive_on)
+{
+    int N = ix + n;
+    for (; ix < N; ++ix) {
+
+        // Within temperature-level MH
+        for (int j = 0; j < n_temps; ++j) {
+
+            // Propose a particle
+            TemperatureLevel& temp_level = temps[j];
+            Particle proposed_particle = proposal_engine.propose_particle(*temp_level.particle_ptr, temp_level.w_prop_sd);
+
+            // Compute proposed likelihood and prior
+            double proposed_loglike = model.calc_loglikelihood(proposed_particle);
+            double proposed_logprior = model.calc_logprior(proposed_particle);
+
+            // Compute acceptance rate under power-posterior
+            double A = temp_level.beta * (proposed_loglike - temp_level.loglike) + (proposed_logprior - temp_level.logprior);
+            double u = std::log(U(rng.engine));
+
+            // Accept
+            if (u < A) {
+                *temp_level.particle_ptr = proposed_particle;  // change the particle's value
+                temp_level.loglike = proposed_loglike;
+                temp_level.logprior = proposed_logprior;
+
+                // Robbins-Monroe positive update
+                if (adaptive_on) {
+                    temp_level.w_prop_sd = std::exp( std::log(temp_level.w_prop_sd) + (1.0 - params.target_acceptance) / sqrt(ix + 1.0) );
+                    temp_level.w_prop_sd = (temp_level.w_prop_sd > 1.0 ? 1.0 : temp_level.w_prop_sd);
+                }
+            } else {
+                // Robbins-Monroe negative update
+                if (adaptive_on) {
+                    temp_level.w_prop_sd = std::exp( std::log(temp_level.w_prop_sd) - params.target_acceptance / sqrt(ix + 1.0) );
+                }
+            }
+
+            // Store the loglikelihood for TI
+            loglikelihoods(ix, j) = temp_level.loglike;
+
+            // Track expected acceptance rate in cold chain
+            if (j == (n_temps - 1)) {
+                acceptance_rate_cumul += (A < 0.0 ? std::exp(A) : 1.0);
+            }
+
+        }
+
+        // Between-temperature swaps
+        if (ix % swap_freq == 0) {
+            for (int j = 1; j < n_temps; ++j) {
+                double a1 = (temps[j].beta - temps[j-1].beta) * temps[j-1].loglike;
+                double a2 = (temps[j-1].beta - temps[j].beta) * temps[j].loglike;
+                double A = a1 + a2;
+                double u = std::log(U(rng.engine));
+                
+                // Accept
+                if (u < A) {
+                    std::swap(temps[j].particle_ptr, temps[j-1].particle_ptr);
+                    std::swap(temps[j].loglike, temps[j-1].loglike);
+                    std::swap(temps[j].logprior, temps[j-1].logprior);
+                }
+
+                swap_rate_cumul(j-1) += (A < 0.0 ? std::exp(A) : 1.0);
+            }
+            ++n_swap_attempts;
+        }
+
+        // Compute running swap rates
+        swap_rates.row(ix) = swap_rate_cumul / double(n_swap_attempts);
+
+        // Store cold chain for this iteration
+        particle_trace[ix] = *temps[n_temps - 1].particle_ptr;
+        loglike_trace[ix] = temps[n_temps - 1].loglike;
+        logprior_trace[ix] = temps[n_temps - 1].logprior;
+        acceptance_trace[ix] = acceptance_rate_cumul / double(ix + 1);
+    }
+}
 
 
 void MCMC::write_output(
@@ -139,136 +285,4 @@ Particle MCMC::get_map_particle() const
     std::sort(map_particle.ws.begin(), map_particle.ws.end());
     return map_particle;
 }
-
-
-MCMC::TemperatureLevel::TemperatureLevel()
-    : beta(0.0),
-    particle_ptr(NULL),
-    loglike(-9999),
-    logprior(-9999)
-{}
-
-
-std::vector<MCMC::TemperatureLevel> MCMC::create_temp_levels(
-    std::vector<Particle>& particles, 
-    double beta_skew)
-{
-
-    // Initialise
-    int n_temps = particles.size();
-    std::vector<MCMC::TemperatureLevel> temp_levels(n_temps);
-
-    // Populate with a sequence from 0 to 1, raised to the power beta_skew
-    for (int j = 0; j < n_temps; ++j) {
-        temp_levels[j].particle_ptr = &particles[j];
-        temp_levels[j].beta = pow(j / double(n_temps - 1), beta_skew);
-    }
-
-    return temp_levels;
-}
-
-
-void MCMC::run_burn()
-{
-    // Initialise
-    for (int j = 0; j < n_temps; ++j) {
-        particles[j] = proposal_engine.create_particle();
-        temps[j].loglike = model.calc_loglikelihood(particles[j]);
-        temps[j].logprior = model.calc_logprior(particles[j]);
-    }
-    // Store cold chain
-    particle_trace[ix] = *temps[n_temps - 1].particle_ptr;
-    loglike_trace[ix] = temps[n_temps - 1].loglike;
-    logprior_trace[ix] = temps[n_temps - 1].logprior;
-    acceptance_rate_cumul = 1.0;
-    acceptance_trace[ix] = 1.0;
-    ++ix;
-
-    run_iterations(n_burn_iters - 1);
-}
-
-
-void MCMC::run_sampling()
-{
-    run_iterations(n_sample_iters);
-}
-
-
-
-void MCMC::run_iterations(int n)
-{
-    int N = ix + n;
-    for (; ix < N; ++ix) {
-
-        // Within temperature-level MH
-        for (int j = 0; j < n_temps; ++j) {
-
-            // Propose a particle
-            TemperatureLevel& temp_level = temps[j];
-            Particle proposed_particle = proposal_engine.propose_particle(*temp_level.particle_ptr, params.w_proposal_sd);
-
-            // Compute proposed likelihood and prior
-            double proposed_loglike = model.calc_loglikelihood(proposed_particle);
-            double proposed_logprior = model.calc_logprior(proposed_particle);
-
-            // Compute acceptance rate under power-posterior
-            double A = temp_level.beta * (proposed_loglike - temp_level.loglike) + (proposed_logprior - temp_level.logprior);
-            double u = std::log(U(rng.engine));
-
-            // Accept
-            if (u < A) {
-                *temp_level.particle_ptr = proposed_particle;  // change the particle's value
-                temp_level.loglike = proposed_loglike;
-                temp_level.logprior = proposed_logprior;
-            }
-
-            // Store the loglikelihood for TI
-            loglikelihoods(ix, j) = temp_level.loglike;
-
-            // Track expected acceptance rate in cold chain
-            if (j == (n_temps - 1)) {
-                acceptance_rate_cumul += (A < 0.0 ? std::exp(A) : 1.0);
-            }
-        }
-
-        // Between-temperature swaps
-        if (ix % swap_freq == 0) {
-            for (int j = 1; j < n_temps; ++j) {
-                double a1 = (temps[j].beta - temps[j-1].beta) * temps[j-1].loglike;
-                double a2 = (temps[j-1].beta - temps[j].beta) * temps[j].loglike;
-                double A = a1 + a2;
-                double u = std::log(U(rng.engine));
-                
-                // Accept
-                if (u < A) {
-                    std::swap(temps[j].particle_ptr, temps[j-1].particle_ptr);
-                    std::swap(temps[j].loglike, temps[j-1].loglike);
-                    std::swap(temps[j].logprior, temps[j-1].logprior);
-
-                    // Increment if swapped
-                    ++n_swaps(j-1);
-                }
-            }
-            ++n_swap_attempts;
-        }
-
-        // Compute running swap rates
-        swap_rates.row(ix) = n_swaps / n_swap_attempts;
-
-        // Store cold chain for this iteration
-        particle_trace[ix] = *temps[n_temps - 1].particle_ptr;
-        loglike_trace[ix] = temps[n_temps - 1].loglike;
-        logprior_trace[ix] = temps[n_temps - 1].logprior;
-        acceptance_trace[ix] = acceptance_rate_cumul / double(ix + 1);
-    }
-}
-
-
-void MCMC::run()
-{
-    run_burn();
-    run_sampling();
-}
-
-
 
