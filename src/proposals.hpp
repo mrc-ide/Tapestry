@@ -74,5 +74,5 @@ public:
     * - Best would be for this to take a *pointer* to the proposed particle
     * - Then we don't copy, but update in place, I think
     */
-    Particle propose_particle(const Particle& particle);
+    Particle propose_particle(const Particle& particle, const double w_prop_sd);
 };

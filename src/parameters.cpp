@@ -10,8 +10,9 @@ Parameters::Parameters(
     double v, 
     double rho,
     double G,
-    double w_proposal_sd,
-    const int n_pi_bins
+    const int n_pi_bins,
+    double target_acceptance,
+    int swap_freq
 )
     : K(K),
     e_0(e_0),
@@ -19,8 +20,9 @@ Parameters::Parameters(
     v(v),
     rho(rho),
     G(G),
-    w_proposal_sd(w_proposal_sd),
-    n_pi_bins(n_pi_bins)
+    n_pi_bins(n_pi_bins),
+    target_acceptance(target_acceptance),
+    swap_freq(swap_freq)
 {};
 
 
@@ -35,6 +37,7 @@ void Parameters::print()
     cout << "  G: " << G << endl;
     cout << "  n_pi_bins: " << n_pi_bins << endl;
     cout << "MCMC Parameters:" << endl;
-    cout << "  w_proposal: " << w_proposal_sd << endl;
+    cout << "  target_acceptance: " << target_acceptance << endl;
+    cout << "  swap_freq: " << swap_freq << endl;
 };
 

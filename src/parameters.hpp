@@ -16,7 +16,8 @@ struct Parameters
     const int n_pi_bins;
 
     // MCMC Parameters
-    const double w_proposal_sd;
+    double target_acceptance;
+    int swap_freq;
 
     Parameters(
         int K, 
@@ -25,8 +26,9 @@ struct Parameters
         double v, 
         double rho, 
         double G,
-        double w_proposal_sd,
-        int n_pi_bins
+        int n_pi_bins,
+        double target_acceptance,
+        int swap_freq
     );
     
     void print();

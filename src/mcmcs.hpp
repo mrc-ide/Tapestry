@@ -25,6 +25,7 @@ private:
         Particle* particle_ptr;
         double loglike;
         double logprior;
+        double w_prop_sd;
 
         TemperatureLevel();
     };
@@ -44,7 +45,7 @@ private:
         double beta_skew = 5.0
     );
 
-    void run_iterations(int n);
+    void run_iterations(int n, bool adaptive_on = false);
     void run_burn();
     void run_sampling();
 
@@ -55,7 +56,7 @@ public:
     const int n_burn_iters;                     // Number of burn-in iterations
     const int n_sample_iters;                   // Number of sampling iterations
     const int n_total_iters;
-    double acceptance_rate_cumul;               // Cumulative acceptance rate until `ix`
+    double acceptance_rate_cumul;               // Cumulative acceptance rate until `ix` (cold chain only)
     
     // Storage
     // TODO: is there a reason not to use Eigen for acceptance / logposterior?
@@ -74,9 +75,9 @@ public:
     MatrixXd loglikelihoods;              // Loglikelihoods; for TI; TODO: should be array? Probably, see ModelEvidence 104-106
 
     //  Recording swaps
-    double n_swap_attempts;               // No. swap attempts; same for all pairs of levels
-    ArrayXd n_swaps;                      // No. swaps for each pair, up to current `ix`
-    MatrixXd swap_rates;                  // Rate of swapping for each pair of temp. levels
+    int n_swap_attempts;                  // No. swap attempts; same for all pairs of rungs
+    ArrayXd swap_rate_cumul;              // Cumulative swap rate for each pair, up to current `ix`
+    MatrixXd swap_rates;                  // Rate of swapping for each pair of rungs
     
 
     // FUNCTIONS
@@ -85,6 +86,8 @@ public:
         const Parameters& params, 
         const Model& model, 
         ProposalEngine& proposal_engine,
+        int n_burn_iters,
+        int n_sample_iters,
         int n_temps
     );
 
