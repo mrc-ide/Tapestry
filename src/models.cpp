@@ -30,7 +30,17 @@ Model::Model(const Parameters& params, const VCFData& data)
     allele_configs(create_allele_configs(params.K)),
     ibd(params.K),
     sampling_probs(create_sampling_probs(data, allele_configs, ibd.states)),
-    betabin_lookup(params, data, false),
+    betabin_lookup(data, params.n_pi_bins, params.e_0, params.e_1, params.v, false),
+    transition_matrices(create_transition_matrices(params, data))
+{};
+
+Model::Model(const Parameters& params, const VCFData& data, const BetabinomialArray& betabin_lookup)
+    : params(params),
+    data(data),
+    allele_configs(create_allele_configs(params.K)),
+    ibd(params.K),
+    sampling_probs(create_sampling_probs(data, allele_configs, ibd.states)),
+    betabin_lookup(betabin_lookup),
     transition_matrices(create_transition_matrices(params, data))
 {};
 
@@ -175,8 +185,9 @@ double Model::calc_loglikelihood(const Particle& particle) const
 
     // Iterate
     for (; t < data.n_sites; ++t) {
-        F.row(t) = F.row(t-1) * transition_matrices[t-1];           // Transition
-        F.row(t).array() *= (wsaf_betabin_probs.row(t) * sampling_probs[t]).array(); // Emission
+        F.row(t) = (F.row(t-1) * transition_matrices[t-1]).array() * (wsaf_betabin_probs.row(t) * sampling_probs[t]).array(); // Trans. +  Emit.
+        //F.row(t) = (F.row(t-1) * transition_matrices[t-1]);   // Transition
+        //F.row(t).array() *= (wsaf_betabin_probs.row(t) * sampling_probs[t]).array(); // Emission
         scales(t) = F.row(t).sum();
         F.row(t) /= scales(t);
         loglike += log(scales(t));
@@ -186,6 +197,7 @@ double Model::calc_loglikelihood(const Particle& particle) const
 }
 
 
+// TODO: would be quite benefical to cache the logposterior for already used proportions
 double Model::calc_logposterior(const Particle& particle) const
 {
     return calc_logprior(particle) + calc_loglikelihood(particle);

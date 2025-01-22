@@ -4,24 +4,22 @@
 #include <string>
 #include <vector>
 #include "libs/cli11/CLI11.hpp"
+#include "betabin.hpp"
 #include "data.hpp"
 #include "ibd.hpp"
 #include "io.hpp"
 #include "mcmcs.hpp"
 #include "models.hpp"
-#include "model_compare.hpp"
-#include "model_fitting.hpp"
+#include "summarise.hpp"
 #include "parameters.hpp"
 #include "particle_writers.hpp"
 #include "particles.hpp"
 #include "proposals.hpp"
 #include "timer.hpp"
-using namespace std; // TODO: let's remove this soon
 
 
 int main(int argc, char* argv[])
 {
-
     // PARSE CLI
     CLI::App app{"Infer COI and pairwise IBD for P. falciparum malaria"};
 
@@ -33,18 +31,13 @@ int main(int argc, char* argv[])
 
     // DEFAULTS
     // IO
-    string input_vcf;
-    string sample_name;
-    string output_dir = "tapestry_output";
+    std::string input_vcf;
+    std::string sample_name;
+    std::string output_dir = "tapestry_output";
 
     // Model hyperparameters
-    // TODO: 
-    // - Could I initialise Parameters here?
-    // - Then options take params-><var>; &c
-    // - However, would not be immutable
-    int min_K = 1;
-    int max_K = 4;
-    int K = -1;
+    int minK = 1;
+    int maxK = 4;
     double e_0 = 0.0001;            // REF -> ALT error probability
     double e_1 = 0.005;             // ALT -> REF error probability
     double v = 500;                 // WSAF dispersion
@@ -76,10 +69,12 @@ int main(int argc, char* argv[])
                 ->required();
     cmd_infer->add_option("-o,--output_dir", output_dir, "Output directory.")
                 ->group("Input and output");
-
-    cmd_infer->add_option("-K, --COI", K, "Complexity of infection.")
+    cmd_infer->add_option("-k, --minK", minK, "Minimum COI.")
                 ->group("Model Hyperparameters")
-                ->check(CLI::Range(min_K, max_K));
+                ->check(CLI::Range(1, 9));
+    cmd_infer->add_option("-K, --maxK", maxK, "Maximum COI.")
+                ->group("Model Hyperparameters")
+                ->check(CLI::Range(minK, 9));
     cmd_infer->add_option("-e, --error_ref", e_0, "Probability of REF->ALT error.")
                 ->group("Model Hyperparameters")
                 ->check(CLI::Range(0, 1));
@@ -118,101 +113,76 @@ int main(int argc, char* argv[])
     
     // Filter
     if (app.got_subcommand("filter")) {
-        cout << string(80, '-') << endl;
-        cout << "Tapestry: Filtering VCF to informative bi-allelic SNPs" << endl;
-        cout << string(80, '-') << endl;
-        cout << "Not yet implemented!" << endl;
+        std::cout << std::string(80, '-') << std::endl;
+        std::cout << "Tapestry: Filtering VCF to informative bi-allelic SNPs" << std::endl;
+        std::cout << std::string(80, '-') << std::endl;
+        std::cout << "Not yet implemented!" << std::endl;
     
     // Infer
     } else if (app.got_subcommand("infer")) {
-        cout << string(80, '-') << endl;
-        cout << "Tapestry: Inferring COI, proportions and IBD" << endl;
-        cout << string(80, '-') << endl;
+        std::cout << std::string(80, '-') << std::endl;
+        std::cout << "Tapestry: Inferring COI, proportions and IBD" << std::endl;
+        std::cout << std::string(80, '-') << std::endl;
 
         // Load data
         VCFData data(input_vcf, sample_name);
         data.print();
 
-        // Setup of Ks vector
-        std::vector<int> Ks(1, K); 
-        if (K == -1) { // iterate over multiple K values
-            Ks.resize(max_K - min_K + 1);
-            std::iota(Ks.begin(), Ks.end(), min_K);
-        }
+        // Make beta-binomial array
+        BetabinomialArray betabin_lookup(data, n_pi_bins, e_0, e_1, v, false);
 
-        // We will store the model fits for comparison later
-        // std::vector<std::unique_ptr<ModelFits>> model_fits; TODO: figure out how to do this properly
-        // TODO: Alternate implementation we store just a struct of the key things
-        std::vector<ModelFit> model_fits;
-        model_fits.reserve(Ks.size());
-        std::vector<std::unique_ptr<MCMC>> mcmc_ptrs;
-        mcmc_ptrs.reserve(Ks.size());
-        for (int k : Ks) {
-            cout << "K = " << k << endl;
+        for (int k = minK; k <= maxK; ++k) {
+            std::cout << "K = " << k << std::endl;
+            std::string K_output_dir = output_dir + "/K" + std::to_string(k);
 
-            // Define output directory
-            string K_output_dir = output_dir + "/K" + std::to_string(k);
-
-            // Create objects for this COI
+            // Creation
             Parameters params(k, e_0, e_1, v, rho, G, n_pi_bins, target_acceptance, swap_freq);
             ProposalEngine proposal_engine(params);
-            Model model(params, data); // TODO: Stop recreating BetabinArray 
-            //model.print();
+            Model model(params, data, betabin_lookup);
 
-            // Create MCMC on the heap
-            cout << "  Runnning MCMC..." << endl;
-            mcmc_ptrs.emplace_back(std::make_unique<MCMC>(params, model, proposal_engine, n_burn_iters, n_sample_iters, n_temps));
-            mcmc_ptrs.back()->run();
+            // Run MCMC
+            std::cout << "  Runnning MCMC..." << std::endl;
+            MCMC mcmc(params, model, proposal_engine, n_burn_iters, n_sample_iters, n_temps);
+            mcmc.run();
 
             // Write MCMC outputs
-            cout << "  Writing MCMC outputs..." << endl;
+            std::cout << "  Writing MCMC outputs..." << std::endl;
             ProportionParticleWriter particle_writer;
-            mcmc_ptrs.back()->write_output(K_output_dir, particle_writer);
+            mcmc.write_output(K_output_dir, particle_writer);
 
-            // Fitting
-            cout << "  Fitting..." << endl;
-            Particle map_particle = mcmc_ptrs.back()->get_map_particle();
-            std::sort(map_particle.ws.begin(), map_particle.ws.end());
+            // Fit
+            std::cout << "  Fitting..." << std::endl;
+            Particle map_particle = mcmc.get_map_particle();
             ViterbiResult viterbi = model.get_viterbi_path(map_particle);
 
-            ModelFit model_fit(
-                params,
+            // Summarise
+            ModelFit::SampleStatistics sample_stats;
+            ModelFit::Summariser summariser(
+                params, 
                 data,
-                viterbi.logposterior, 
+                sample_stats,
+                viterbi.path, 
                 map_particle.ws,
-                viterbi.path
+                viterbi.logposterior
             );
-            cout << "  Writing fit outputs..." << endl;
-            model_fit.write_output(K_output_dir);
-            cout << "Done" << endl;
-
-            // Store the fits
-            model_fits.push_back(model_fit);
+            summariser.write_output(K_output_dir);
+            ModelEvidenceCalculator evidence_calculator(mcmc, sample_stats);
+            evidence_calculator.calc_logevidence();
+            ModelFit::write_statistics_to_json(sample_stats, K_output_dir);
+            std::cout << "Done." << std::endl;
         }
 
-        // Heuristic model comparison
-        cout << "Comparing fits across models..." << endl;
-        ModelCompare model_compare(
-            model_fits,
-            data.n_sites,
-            Ks
-        );
-        string output_csv = output_dir + "/compare.heuristics.csv";
-        model_compare.write_output(output_csv);
-        cout << "Done" << endl;
-
-        // Compute model evidence
-        std::cout << "Computing model evidence..." << std::endl;
-        ModelEvidence model_evidence(mcmc_ptrs, Ks);
-        model_evidence.calc_summary();
-        std::string evidence_csv = output_dir + "/compare.evidence.csv";
-        model_evidence.write_output(evidence_csv);
-        std::cout << "Done" << std::endl;
-
+        std::cout << "Comparing across COIs..." << std::endl;
+        CompareAcrossCOI comparer(output_dir);
+        comparer.load_sample_statistics();
+        comparer.calc_posterior();
+        comparer.write_comparison_csv();
+        std::cout << "Done. Results are here: " << output_dir << std::endl;
     } else {
-        // Throw an exception 
+        throw std::invalid_argument("Invalid subcommand.");
     }
-    cout << string(80, '-') << endl;
-    cout << "Time elapsed (ms): " << timer.elapsed<chrono::milliseconds>() << endl;
-    cout << string(80, '-') << endl;
+
+    std::cout << std::string(80, '-') << std::endl;
+    std::cout << "Time elapsed (ms): " << timer.elapsed<chrono::milliseconds>() << std::endl;
+    std::cout << std::string(80, '-') << std::endl;
 }

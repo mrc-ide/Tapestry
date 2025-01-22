@@ -57,8 +57,7 @@ set(SOURCES
     src/ibd.cpp
     src/io.cpp
     src/mcmcs.cpp
-    src/model_compare.cpp
-    src/model_fitting.cpp
+    src/summarise.cpp
     src/models.cpp
     src/parameters.cpp
     src/particle_writers.cpp
@@ -81,6 +80,17 @@ find_package(HTSlib 1.4 REQUIRED)
 # Link include directories and library to the executable
 target_include_directories(${TARGET} PUBLIC ${HTSlib_INCLUDE_DIRS})
 target_link_libraries(${TARGET} PUBLIC ${HTSlib_LIBRARIES})
+
+
+# --------------------------------------------------------------------------------
+# Link OpenMP
+# --------------------------------------------------------------------------------
+
+
+# find_package(OpenMP)
+# if(OpenMP_CXX_FOUND)
+#     target_link_libraries(MyTarget PUBLIC OpenMP::OpenMP_CXX)
+# endif()
 
 
 # ================================================================================

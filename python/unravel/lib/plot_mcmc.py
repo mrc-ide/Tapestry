@@ -240,7 +240,7 @@ class DiagnosticsTracePlotter:
         """
         
         # Dataframes
-        self.mcmc_df = pd.read_csv(mcmc_path)
+        self.mcmc_df = self._load_mcmc_dataframe(mcmc_path)
         self.burn_df = self.mcmc_df.query("phase == 'burn'")
         self.sample_df = self.mcmc_df.query("phase == 'sample'")
         self.n_burn = self.burn_df.shape[0]
@@ -254,6 +254,15 @@ class DiagnosticsTracePlotter:
         mcmc_path = f"{output_dir}/mcmc.diagnostics.csv"
         return cls(mcmc_path)
     
+    def _load_mcmc_dataframe(self, mcmc_path: str) -> pd.DataFrame:
+        """
+        Load the MCMC trace dataframe, handling change in columns included
+        over versions
+        """
+        mcmc_df = pd.read_csv(mcmc_path)
+        if not "logposterior" in mcmc_df.columns:
+            mcmc_df["logposterior"] = mcmc_df["loglike"] + mcmc_df["logprior"]
+        return mcmc_df
     
     def _acceptance_plotter(self, ax, title=None):
         """

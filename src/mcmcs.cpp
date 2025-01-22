@@ -203,7 +203,7 @@ void MCMC::write_output(
     fs::create_directories(output_dir);  // TODO: not sure this is cross-platform
     
     // Prepare file paths
-    std::string mcmc_csv = output_dir + "/mcmc.diagnostics.csv";
+    std::string mcmc_csv = output_dir + "/mcmc.trace.csv";
     std::string particles_csv = output_dir + "/mcmc.parameters.csv";
 
     // Write MCMC diagnostics
@@ -255,7 +255,7 @@ void MCMC::write_output(
     }
     beta_file.close();
 
-    // Quick write of swap rates; should add to mcmc.diagnostics.csv
+    // Quick write of swap rates; should add to mcmc.trace.csv
     std::ofstream swap_file(swap_csv);
     if (!swap_file.is_open()) {
         throw std::invalid_argument("Could not open output file.");
@@ -281,7 +281,8 @@ Particle MCMC::get_map_particle() const
             logjoint_max = logjoint;
         }
     }
-
-    return particle_trace[i_max];
+    Particle map_particle = particle_trace[i_max];
+    std::sort(map_particle.ws.begin(), map_particle.ws.end());
+    return map_particle;
 }
 
