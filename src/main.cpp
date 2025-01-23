@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include "libs/cli11/CLI11.hpp"
+#include "libs/json.hpp"
 #include "betabin.hpp"
 #include "data.hpp"
 #include "ibd.hpp"
@@ -108,8 +109,8 @@ int main(int argc, char* argv[])
     CLI11_PARSE(app, argc, argv);
 
     // RUN
-    // Start timing...
-    Timer timer;
+    Timer timer_total;
+    nlohmann::json runtime;
     
     // Filter
     if (app.got_subcommand("filter")) {
@@ -132,8 +133,10 @@ int main(int argc, char* argv[])
         BetabinomialArray betabin_lookup(data, n_pi_bins, e_0, e_1, v, false);
 
         for (int k = minK; k <= maxK; ++k) {
-            std::cout << "K = " << k << std::endl;
-            std::string K_output_dir = output_dir + "/K" + std::to_string(k);
+            std::cout << "Inferring under K = " << k << std::endl;
+            std::string K_string = "K" + std::to_string(k);
+            std::string K_output_dir = output_dir + "/" + K_string;
+            Timer timer_coi;
 
             // Creation
             Parameters params(k, e_0, e_1, v, rho, G, n_pi_bins, target_acceptance, swap_freq);
@@ -170,6 +173,9 @@ int main(int argc, char* argv[])
             evidence_calculator.calc_logevidence();
             ModelFit::write_statistics_to_json(sample_stats, K_output_dir);
             std::cout << "Done." << std::endl;
+
+            // Store
+            runtime[K_string] = timer_coi.elapsed<chrono::milliseconds>();
         }
 
         std::cout << "Comparing across COIs..." << std::endl;
@@ -182,7 +188,14 @@ int main(int argc, char* argv[])
         throw std::invalid_argument("Invalid subcommand.");
     }
 
+    double total_elapsed = timer_total.elapsed<chrono::milliseconds>();
+    runtime["TOTAL"] = total_elapsed;
+
     std::cout << std::string(80, '-') << std::endl;
-    std::cout << "Time elapsed (ms): " << timer.elapsed<chrono::milliseconds>() << std::endl;
+    std::cout << "Time elapsed (ms): " << total_elapsed << std::endl;
     std::cout << std::string(80, '-') << std::endl;
+
+    // Write runtime
+    std::ofstream o(output_dir + "/runtime.json");
+    o << std::setw(4) << runtime << std::endl;
 }
