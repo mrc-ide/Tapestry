@@ -185,9 +185,9 @@ double Model::calc_loglikelihood(const Particle& particle) const
 
     // Iterate
     for (; t < data.n_sites; ++t) {
-        F.row(t) = (F.row(t-1) * transition_matrices[t-1]).array() * (wsaf_betabin_probs.row(t) * sampling_probs[t]).array(); // Trans. +  Emit.
-        //F.row(t) = (F.row(t-1) * transition_matrices[t-1]);   // Transition
-        //F.row(t).array() *= (wsaf_betabin_probs.row(t) * sampling_probs[t]).array(); // Emission
+        //F.row(t) = (F.row(t-1) * transition_matrices[t-1]).array() * (wsaf_betabin_probs.row(t) * sampling_probs[t]).array(); // Trans. +  Emit. SLOWER!
+        F.row(t) = (F.row(t-1) * transition_matrices[t-1]);   // Transition
+        F.row(t).array() *= (wsaf_betabin_probs.row(t) * sampling_probs[t]).array(); // Emission
         scales(t) = F.row(t).sum();
         F.row(t) /= scales(t);
         loglike += log(scales(t));
