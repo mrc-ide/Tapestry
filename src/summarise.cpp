@@ -18,6 +18,14 @@ namespace fs = std::filesystem;
 
 
 namespace ModelFit {
+
+
+    // ================================================================================
+    // Compute sample-level summary statistics based on a model fit
+    // 
+    // ================================================================================
+
+
     SampleStatistics::SampleStatistics() {};
 
     bool compare_by_coi(
@@ -46,10 +54,76 @@ namespace ModelFit {
         output_json << std::setw(4) << j << std::endl;
     }
 
+
+    // ================================================================================
+    // Compute pairwise IBD statistics based on a model fit
+    // 
+    // ================================================================================
+
+    PairwiseIBDStatistics::PairwiseIBDStatistics(
+            const std::vector<BEDRecord>& ibd_segments,
+            const double genome_length)
+        : ibd_segments(ibd_segments),
+        genome_length(genome_length),
+        n_ibd(ibd_segments.size()),
+        ibd_segment_lengths(n_ibd)
+    {
+        if (n_ibd == 0) {
+            return;
+        }
+
+        calc_ibd_segment_lengths_and_total();
+		calc_f_ibd();
+		calc_l_ibd();
+		calc_n50_ibd();
+    }
+
+    // TODO: Could probably initialise inside of member intializer list;
+    void PairwiseIBDStatistics::calc_ibd_segment_lengths_and_total() {
+        double length;
+        for (const BEDRecord& ibd_segment : ibd_segments) {
+            length = ibd_segment.end - ibd_segment.start;
+            ibd_segment_lengths.emplace_back(length);
+            total_ibd += length;
+        }
+    }
+
+    void PairwiseIBDStatistics::calc_f_ibd() {
+        if (genome_length <= 0) {
+            throw std::invalid_argument("Genome length must be greater than 0bp.");
+        }
+        f_ibd = total_ibd / genome_length;
+    }
+
+    void PairwiseIBDStatistics::calc_l_ibd() {
+        l_ibd = total_ibd / n_ibd;
+    }
+
+    void PairwiseIBDStatistics::calc_n50_ibd() {
+        // Compute N50 segment length
+        std::sort(ibd_segment_lengths.begin(), ibd_segment_lengths.end());
+        double frac_cumsum = 0;
+        for (double l : ibd_segment_lengths) {
+            frac_cumsum += l / total_ibd;
+            if (frac_cumsum > 0.5) {
+                n50_ibd = l;
+                break;
+            }
+        }
+    }
+
+
+    // ================================================================================
+    // Summarise and write various outputs from a model fit
+    // 
+    // ================================================================================
+
+
     double calc_aic(double n_params, double log_map)
     {
           return 2 * n_params - 2 * log_map;
     }
+
     double calc_bic(double n_params, double log_map, double n_data) 
     {
       return n_params * std::log(n_data) - 2 * log_map;
@@ -63,59 +137,37 @@ namespace ModelFit {
     void Summariser::create_ibd_segments() {
         vector<BEDRecord> pair_ibd_segments;
         for (int i = 0; i < ibd.column_index_to_pair.size(); ++i) {
-            // Get IBD segments
-            pair_ibd_segments = get_ibd_segments(
-                data.chrom_names,
-                data.pos,
-                ibd_pairwise.col(i),
-                ibd.pair_names[i]
-            );
-
-            // Insert in vector
-            ibd_segments.insert(
-                ibd_segments.end(), 
-                pair_ibd_segments.begin(), 
-                pair_ibd_segments.end()
-            );
+          // Get IBD segments
+          pair_ibd_segments = get_ibd_segments(
+              data.chrom_names,
+              data.pos,
+              ibd_pairwise.col(i),
+              ibd.pair_names[i]
+          );
+          
+          // Compute pairwise statistics
+          ibd_pairwise_stats.emplace_back(
+	          PairwiseIBDStatistics(
+	          pair_ibd_segments,
+	          data.genome_length)
+	        );
+	        
+          // Insert in vector
+          ibd_segments.insert(
+              ibd_segments.end(), 
+              pair_ibd_segments.begin(), 
+              pair_ibd_segments.end()
+          );
         }
     }
 
     void Summariser::calc_ibd_summary_stats() {
-        // Check if there is any IBD; if not default and exit.
-        sample_stats.n_ibd = ibd_segments.size();
-        if (sample_stats.n_ibd == 0) {
-            sample_stats.f_ibd = 0.0;
-            sample_stats.l_ibd = 0.0;
-            sample_stats.n50_ibd = 0.0;
-            return;
-        }
-
-        // Get a vector of IBD segment lengths
-        double length;
-        double total_ibd = 0;
-        vector<double> ibd_segment_lengths;
-        ibd_segment_lengths.reserve(sample_stats.n_ibd);
-        for (const BEDRecord& ibd_segment : ibd_segments) {
-            length = ibd_segment.end - ibd_segment.start;
-            ibd_segment_lengths.emplace_back(length);
-            total_ibd += length;
-        }
-
-        // Compute length and fraction IBD
-        sample_stats.l_ibd = total_ibd / sample_stats.n_ibd;
         int G = data.genome_length * ibd.column_index_to_pair.size();
-        sample_stats.f_ibd = total_ibd / G;
-
-        // Compute N50 segment length
-        std::sort(ibd_segment_lengths.begin(), ibd_segment_lengths.end());
-        double frac_cumsum = 0;
-        for (double l : ibd_segment_lengths) {
-            frac_cumsum += l / total_ibd;
-            if (frac_cumsum > 0.5) {
-                sample_stats.n50_ibd = l;
-                break;
-            }
-        }
+        PairwiseIBDStatistics overall_ibd_stats(ibd_segments, G);
+        sample_stats.n_ibd = overall_ibd_stats.n_ibd;
+        sample_stats.f_ibd = overall_ibd_stats.f_ibd;
+        sample_stats.l_ibd = overall_ibd_stats.l_ibd;
+        sample_stats.n50_ibd = overall_ibd_stats.n50_ibd;
     }
 
     Summariser::Summariser(
@@ -169,6 +221,26 @@ namespace ModelFit {
         write_bed_records(segment_bed, ibd_segments);
     }
 
+    void Summariser::write_ibd_pairwise_stats(const std::string& output_dir)
+    {
+        std::string csv = output_dir + "/fit.ibd.pairwise_stats.csv";
+        std::ofstream csv_file(csv);
+        if (!csv_file.is_open()) {
+            throw std::invalid_argument("Could not open file.");
+        }
+        csv_file << "pair_name,prop_strain1,prop_strain2,f_ibd,l_ibd,n50_ibd,n_ibd" << "\n";
+        for (int i = 0; i < ibd.column_index_to_pair.size(); ++i) {
+                csv_file << ibd.pair_names[i] << ",";
+                csv_file << sample_stats.ws[ibd.column_index_to_pair[i].first] << ",";
+                csv_file << sample_stats.ws[ibd.column_index_to_pair[i].second] << ",";
+                csv_file << ibd_pairwise_stats[i].f_ibd << ",";
+                csv_file << ibd_pairwise_stats[i].l_ibd << ","; 
+                csv_file << ibd_pairwise_stats[i].n50_ibd << ",";
+                csv_file << ibd_pairwise_stats[i].n_ibd << "\n";
+        }
+        csv_file.close();
+    }
+
     void Summariser::write_sample_stats(const std::string& output_dir)
     {
         nlohmann::json j = sample_stats;
@@ -180,6 +252,7 @@ namespace ModelFit {
     void Summariser::write_output(const std::string& output_dir)
     {
         write_ibd_profiles(output_dir);
+        write_ibd_pairwise_stats(output_dir);
         //write_sample_stats(output_dir);
     }
 }

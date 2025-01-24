@@ -19,6 +19,14 @@ using namespace std;
 
 
 namespace ModelFit {
+    
+
+    // ================================================================================
+    // Compute sample-level summary statistics based on a model fit
+    // 
+    // ================================================================================
+
+
     struct SampleStatistics
     {
         //std::string sample_name;
@@ -51,6 +59,48 @@ namespace ModelFit {
 
     SampleStatistics load_statistics_from_json(const std::string& json_path);
     void write_statistics_to_json(const SampleStatistics& sample_stats, const std::string& output_dir);
+
+
+    // ================================================================================
+    // Compute pairwise IBD statistics based on a model fit
+    // 
+    // ================================================================================
+
+
+    struct PairwiseIBDStatistics
+    {
+    public:
+        // Inputs 
+		const std::vector<BEDRecord>& ibd_segments;
+		const double genome_length;
+		
+		// Calculated
+		int n_ibd;
+		
+		std::vector<int> ibd_segment_lengths; // can reserve in itialiser
+		double total_ibd = 0;		
+		double f_ibd = 0;
+		double l_ibd = 0;
+		double n50_ibd = 0;
+
+        PairwiseIBDStatistics(
+            const std::vector<BEDRecord>& ibd_segments,
+            const double genome_length
+        );
+
+    private:
+        void calc_ibd_segment_lengths_and_total();
+		void calc_f_ibd();
+		void calc_l_ibd();
+		void calc_n50_ibd();
+    };
+
+
+    // ================================================================================
+    // Summarise and write various outputs from a model fit
+    // 
+    // ================================================================================
+
     
     double calc_aic(double n_params, double log_map);
     double calc_bic(double n_params, double log_map, double n_data);
@@ -62,15 +112,17 @@ namespace ModelFit {
         void create_ibd_segments();
         void calc_ibd_summary_stats();
         void write_ibd_profiles(const std::string& output_dir);
+        void write_ibd_pairwise_stats(const std::string& output_dir);
         void write_sample_stats(const std::string& output_dir);
     public:
         const Parameters& params;
         const VCFData& data;
-        SampleStatistics& sample_stats;
+        SampleStatistics& sample_stats;                             // Sample summary statistics
         const VectorXi ibd_states;
         IBDContainer ibd;
-        MatrixXi ibd_pairwise;
-        vector<BEDRecord> ibd_segments;
+        MatrixXi ibd_pairwise;                                      // Pairwise IBD profiles
+        std::vector<PairwiseIBDStatistics> ibd_pairwise_stats;      // Pairwise IBD summary statistics
+        vector<BEDRecord> ibd_segments;                             // Complete list of IBD segments
 
         Summariser(
             const Parameters& params,
@@ -86,6 +138,12 @@ namespace ModelFit {
 }
 
 
+// ================================================================================
+// Compute model evidence using thermodynamic intergration
+// 
+// ================================================================================
+
+
 //TODO: Could probably just be a function
 class ModelEvidenceCalculator
 {
@@ -99,6 +157,13 @@ class ModelEvidenceCalculator
         ModelEvidenceCalculator(const MCMC& mcmc, ModelFit::SampleStatistics& sample_stats);
         void calc_logevidence();
 };
+
+
+// ================================================================================
+// Merge and compare model fits across COI levels
+// 
+// ================================================================================
+
 
 class CompareAcrossCOI
 {

@@ -37,7 +37,7 @@ def sample(sample_dir: str) -> None:
             mcmc_path=coi_dirs.mcmc_diagnostics_csv
         )
         diag_plotter.plot(
-            output_path=png_temp.format(name="mcmc.diagnostics")
+            output_path=png_temp.format(name="mcmc.trace")
         )
 
         # IBD Plots ---------------------------------------------
