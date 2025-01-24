@@ -14,7 +14,7 @@ class TapestryCOIOutputDir:
 		self.coi_dir = coi_dir
 
 		# MCMC diagnostics
-		self.mcmc_diagnostics_csv = f"{coi_dir}/mcmc.diagnostics.csv"
+		self.mcmc_diagnostics_csv = f"{coi_dir}/mcmc.trace.csv"
 		self.mcmc_parameters_csv = f"{coi_dir}/mcmc.parameters.csv"
 
 		# Fits
