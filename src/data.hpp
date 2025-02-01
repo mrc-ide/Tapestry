@@ -3,9 +3,8 @@
 #include <vector>
 #include "htslib/vcf.h"
 #include "libs/eigen-3.4.0/Dense"
+#include "typedefs.hpp"
 using namespace std;
-using Eigen::ArrayXi;
-using Eigen::ArrayXd;
 
 
 
