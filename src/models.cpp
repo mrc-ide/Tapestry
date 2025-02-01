@@ -49,31 +49,6 @@ MatrixXi Model::create_allele_configs(int K)
     return create_powerset(K);
 }
 
-// vector<MatrixXd> Model::create_sampling_probs(
-//         const VCFData& data,
-//         const MatrixXi& allele_configs,
-//         const vector<vector<vector<int>>>& ibd_states  // TODO: we pass from new class
-//         )
-// {
-//     // Initialise
-//     vector<MatrixXd> sampling_probs(
-//         data.n_sites,
-//         MatrixXd::Constant(allele_configs.rows(), ibd_states.size(), -1.0)
-//     );
-
-//     for (int i = 0; i < data.n_sites; ++i) {
-//         // TODO: 
-//         // - This is a copy step, which is bad
-//         // - Better to use references to avoid
-//         sampling_probs[i] = calc_sampling_probs(
-//             data.plafs(i),
-//             allele_configs,
-//             ibd_states
-//         );
-//     }
-
-//     return sampling_probs;
-// }
 
 MatrixXd Model::calc_transition_matrix(int d_ij, const Parameters& params)
 {

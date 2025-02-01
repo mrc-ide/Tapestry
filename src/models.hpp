@@ -50,11 +50,6 @@ private:
 
     // FUNCTIONS
     MatrixXi static create_allele_configs(int K);
-    // vector<MatrixXd> static create_sampling_probs(
-    //     const VCFData& data,
-    //     const MatrixXi& allele_configs,
-    //     const vector<vector<vector<int>>>& ibd_states
-    // );
     MatrixXd static calc_transition_matrix(int d_ij, const Parameters& params);
     vector<MatrixXd> static create_transition_matrices( 
         const Parameters& params,
