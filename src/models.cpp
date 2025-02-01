@@ -34,7 +34,7 @@ Model::Model(const Parameters& params, const VCFData& data)
     transition_matrices(create_transition_matrices(params, data))
 {};
 
-Model::Model(const Parameters& params, const VCFData& data, const BetabinomialArray& betabin_lookup)
+Model::Model(const Parameters& params, const VCFData& data, const Betabinomial::LookupMatrix& betabin_lookup)
     : params(params),
     data(data),
     allele_configs(create_allele_configs(params.K)),

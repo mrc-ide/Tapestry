@@ -8,75 +8,52 @@
 #include "constants.hpp"
 #include "data.hpp"
 #include "parameters.hpp"
+#include "libs/eigen-3.4.0/Dense"
 #include "typedefs.hpp"
 using namespace std;
 
 
-class BetabinomialArray
-{
-private:
 
-    /*
-    * Hash a pair of integers;
-    * used to hash the (REF, ALT) read counts
-    */
-    struct pair_hash
-    {
-        size_t operator()(const pair<int, int> &p) const
-        {
-            size_t h = (size_t(p.first) << 32) ^ size_t(p.second);
-            return h;
-        }
-    };
 
-    //const Parameters& params;
-    const VCFData& data;
-    const int n_pi_bins;    // Number of bins to approximate
-    const double e_0;       // REF->ALT error rate
-    const double e_1;       // ALT->REF error rate
-    const double v;         // Overdispersion parameter
-    
+namespace Betabinomial {
 
-    MatrixXd lookup_matrix;
-    const pair<int, int> missing_pair{MISSING_AD_VALUE, MISSING_AD_VALUE};
-    void calc_lookup_matrix(bool as_loglikelihood);
-    void check_valid() const; // Check that all values have been initialised.
+    /* Identify missing data */
+    extern const std::pair<int,int> missing_pair;
 
-public:
+    /* Used to hash the (REF, ALT) counts */
+    struct pair_hash;
 
-    const bool as_loglikelihood; // defaults to true, first constructor
-
-    // BetabinomialArray(const Parameters& params, const VCFData& data);
-    // BetabinomialArray(const Parameters& params, const VCFData& data, bool as_loglikelihood);
-
-    BetabinomialArray(
-        const VCFData& data, 
-        const int n_pi_bins, 
-        const double e_0, 
-        const double e_1, 
-        const double v);
-    BetabinomialArray(
-        const VCFData& data, 
-        const int n_pi_bins, 
-        const double e_0, 
-        const double e_1, 
+    MatrixXd calc_prob_matrix(
+        const ArrayXi& refs,
+        const ArrayXi& alts,
+        const ArrayXd& pis,
         const double v,
-        bool as_loglikelihood
-        );
+        bool as_loglikelihood = false
+    );
 
-    /*
-    * The () operator is overloaded to act like Eigen array indices, e.g.
-    * array(row_index, col_index); with an important exception:
-    * Instead of taking two integers, the column index is a double that
-    * gets rounded to the approproriate array index
-    * 
-    */
-    double operator()(int locus, double pi_val) const;
+    class LookupMatrix {
+    private:
+        const int n_pi_bins;
+        const double e_0;
+        const double e_1;
+        const double v;
 
-    /*
-    * Given a vector of WSAF values (pi_vals), return a subsetted array
-    * TODO: what to generalise to ArrayBase
-    */
-    MatrixXd subset(ArrayXd pi_vals) const;
-};
+        ArrayXd pi_bin_midpoints;
+        MatrixXd prob_matrix;
+
+        void check_valid() const; // check all values initialised
+    public:
+        LookupMatrix(
+            const VCFData& data,
+            const int n_pi_bins,
+            const double e_0,
+            const double e_1,
+            const double v,
+            bool as_loglikelihood = true);
+        
+        // Subset to the columns with midpoints closest to
+        // indicated pi_vals
+        MatrixXd subset(ArrayXd pi_vals) const;
+    };
+}
 

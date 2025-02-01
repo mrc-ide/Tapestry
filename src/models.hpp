@@ -45,7 +45,7 @@ private:
     const MatrixXi allele_configs;                // All possible allele configurations
     const IBDContainer ibd;                       // IBD state information
     const vector<MatrixXd> sampling_probs;        // Prob. of IBD/allele combo given PLAF
-    const BetabinomialArray betabin_lookup;       // Precomputed WSAF ~ Betabin(...)
+    const Betabinomial::LookupMatrix betabin_lookup;       // Precomputed WSAF ~ Betabin(...)
     const vector<MatrixXd> transition_matrices;   // Distance-dependent HMM trans. probs.
 
     // FUNCTIONS
@@ -60,7 +60,7 @@ public:
 
     // Constructors
     Model(const Parameters& params, const VCFData& data);
-    Model(const Parameters& params, const VCFData& data, const BetabinomialArray& betabin_loopup);
+    Model(const Parameters& params, const VCFData& data, const Betabinomial::LookupMatrix& betabin_loopup);
 
     /*
     * Calculate the log prior probability, 

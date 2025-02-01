@@ -29,6 +29,7 @@ int main(int argc, char* argv[])
     app.require_subcommand(1);
     CLI::App* cmd_filter = app.add_subcommand("filter", "Filter an input VCF prior to inference.");
     CLI::App* cmd_infer = app.add_subcommand("infer", "Run inference from an filtered VCF.");
+    CLI::App* cmd_phase = app.add_subcommand("phase", "Phase genomes in a mixed infection, after inference is complete.");
 
     // DEFAULTS
     // IO
@@ -37,6 +38,7 @@ int main(int argc, char* argv[])
     std::string output_dir = "tapestry_output";
 
     // Model hyperparameters
+    int K;
     int minK = 1;
     int maxK = 4;
     double e_0 = 0.0001;            // REF -> ALT error probability
@@ -94,7 +96,6 @@ int main(int argc, char* argv[])
     cmd_infer->add_option("-b, --n_wsaf_bins", n_pi_bins, "Number of WSAF bins in Betabin lookup table.")
                 ->group("Model Hyperparameters")
                 ->check(CLI::Range(100, 10'000));
-
     cmd_infer->add_option("-t, --temps", n_temps, "Number of temperature levels in PT-MCMC.")
                 ->group("MCMC Parameters")
                 ->check(CLI::Range(5, 100));
@@ -104,6 +105,30 @@ int main(int argc, char* argv[])
     cmd_infer->add_option("-S, --sampling", n_sample_iters, "Number of sampling iterations.")
                 ->group("MCMC Parameters")
                 ->check(CLI::PositiveNumber);
+
+    // Phase
+    cmd_phase->add_option("-i,--input_vcf", input_vcf, "Path to input VCF file.")
+                ->group("Input and output")
+                ->check(CLI::ExistingFile)
+                ->required();
+    cmd_phase->add_option("-s,--target_sample", sample_name, "Target sample in VCF.")
+                ->group("Input and output")
+                ->required();
+    cmd_phase->add_option("-o,--output_dir", output_dir, "Output directory.")
+                ->group("Input and output");
+    cmd_phase->add_option("-K, --coi", K, "Inferred COI value at which to conduct phasing.")
+                ->group("Model Hyperparameters")
+                ->check(CLI::Range(1, 9));
+    cmd_phase->add_option("-e, --error_ref", e_0, "Probability of REF->ALT error.")
+                ->group("Model Hyperparameters")
+                ->check(CLI::Range(0, 1));
+    cmd_phase->add_option("-E, --error_alt", e_1, "Probability of ALT->REF error.")
+                ->group("Model Hyperparameters")
+                ->check(CLI::Range(0, 1));
+    cmd_phase->add_option("-v, --var_wsaf", v, "Controls dispersion in WSAF. Larger is less dispersed.")
+                ->group("Model Hyperparameters")
+                ->check(CLI::PositiveNumber);
+
 
     // Parse
     CLI11_PARSE(app, argc, argv);
@@ -129,8 +154,8 @@ int main(int argc, char* argv[])
         VCFData data(input_vcf, sample_name);
         data.print();
 
-        // Make beta-binomial array
-        BetabinomialArray betabin_lookup(data, n_pi_bins, e_0, e_1, v, false);
+        // Make beta-binomial matrix
+        Betabinomial::LookupMatrix betabin_lookup(data, n_pi_bins, e_0, e_1, v, false);
 
         for (int k = minK; k <= maxK; ++k) {
             std::cout << "Inferring under K = " << k << std::endl;
@@ -184,8 +209,41 @@ int main(int argc, char* argv[])
         comparer.calc_posterior();
         comparer.write_comparison_csv();
         std::cout << "Done. Results are here: " << output_dir << std::endl;
-    } else {
-        throw std::invalid_argument("Invalid subcommand.");
+    
+    } else if (app.got_subcommand("phase")) {
+        std::cout << std::string(80, '-') << std::endl;
+        std::cout << "Tapestry: Phasing genomes after inference" << std::endl;
+        std::cout << std::string(80, '-') << std::endl;
+
+        // // Load data
+        // VCFData data(input_vcf, sample_name);
+        // data.print();
+
+        // // Make beta-binomial array
+        // BetabinomialArray betabin_lookup(data, n_pi_bins, e_0, e_1, v, false);
+
+        // std::cout << "Phasing under K = " << k << std::endl;
+        // std::string K_string = "K" + std::to_string(k);
+        // std::string K_output_dir = output_dir + "/" + K_string;
+
+        // // Load sample statistics
+        // SampleStatistics sample_stats = ModelFit::load_statistics_from_json(
+        //     K_output_dir + "fit.sample_stats.json"
+        // );
+
+        // // Load IBD states profile
+        // // - Need to load this anyways
+        // // - Might as well write a parser for the whole thing?
+        // //VectorXd
+
+        // GenomePhaser phaser(
+        //     sample_stats.K,
+        //     sample_stats.ws,
+        //     e_0, e_1, v
+        // );
+
+
+        // std::cout << "Done. Results are here: " << output_dir << std::endl;
     }
 
     double total_elapsed = timer_total.elapsed<chrono::milliseconds>();
@@ -196,6 +254,7 @@ int main(int argc, char* argv[])
     std::cout << std::string(80, '-') << std::endl;
 
     // Write runtime
-    std::ofstream o(output_dir + "/runtime.json");
+    // TODO: this will get overwritten as different commands are run
+    std::ofstream o(output_dir + "/runtime.json"); 
     o << std::setw(4) << runtime << std::endl;
 }
