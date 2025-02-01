@@ -29,7 +29,7 @@ Model::Model(const Parameters& params, const VCFData& data)
     data(data),
     allele_configs(create_allele_configs(params.K)),
     ibd(params.K),
-    sampling_probs(create_sampling_probs(data, allele_configs, ibd.states)),
+    sampling_probs(create_sampling_probs(data.plafs, allele_configs, ibd.states)),
     betabin_lookup(data, params.n_pi_bins, params.e_0, params.e_1, params.v, false),
     transition_matrices(create_transition_matrices(params, data))
 {};
@@ -39,7 +39,7 @@ Model::Model(const Parameters& params, const VCFData& data, const BetabinomialAr
     data(data),
     allele_configs(create_allele_configs(params.K)),
     ibd(params.K),
-    sampling_probs(create_sampling_probs(data, allele_configs, ibd.states)),
+    sampling_probs(create_sampling_probs(data.plafs, allele_configs, ibd.states)),
     betabin_lookup(betabin_lookup),
     transition_matrices(create_transition_matrices(params, data))
 {};
@@ -49,31 +49,31 @@ MatrixXi Model::create_allele_configs(int K)
     return create_powerset(K);
 }
 
-vector<MatrixXd> Model::create_sampling_probs(
-        const VCFData& data,
-        const MatrixXi& allele_configs,
-        const vector<vector<vector<int>>>& ibd_states  // TODO: we pass from new class
-        )
-{
-    // Initialise
-    vector<MatrixXd> sampling_probs(
-        data.n_sites,
-        MatrixXd::Constant(allele_configs.rows(), ibd_states.size(), -1.0)
-    );
+// vector<MatrixXd> Model::create_sampling_probs(
+//         const VCFData& data,
+//         const MatrixXi& allele_configs,
+//         const vector<vector<vector<int>>>& ibd_states  // TODO: we pass from new class
+//         )
+// {
+//     // Initialise
+//     vector<MatrixXd> sampling_probs(
+//         data.n_sites,
+//         MatrixXd::Constant(allele_configs.rows(), ibd_states.size(), -1.0)
+//     );
 
-    for (int i = 0; i < data.n_sites; ++i) {
-        // TODO: 
-        // - This is a copy step, which is bad
-        // - Better to use references to avoid
-        sampling_probs[i] = calc_sampling_probs(
-            data.plafs(i),
-            allele_configs,
-            ibd_states
-        );
-    }
+//     for (int i = 0; i < data.n_sites; ++i) {
+//         // TODO: 
+//         // - This is a copy step, which is bad
+//         // - Better to use references to avoid
+//         sampling_probs[i] = calc_sampling_probs(
+//             data.plafs(i),
+//             allele_configs,
+//             ibd_states
+//         );
+//     }
 
-    return sampling_probs;
-}
+//     return sampling_probs;
+// }
 
 MatrixXd Model::calc_transition_matrix(int d_ij, const Parameters& params)
 {
@@ -185,7 +185,6 @@ double Model::calc_loglikelihood(const Particle& particle) const
 
     // Iterate
     for (; t < data.n_sites; ++t) {
-        //F.row(t) = (F.row(t-1) * transition_matrices[t-1]).array() * (wsaf_betabin_probs.row(t) * sampling_probs[t]).array(); // Trans. +  Emit. SLOWER!
         F.row(t) = (F.row(t-1) * transition_matrices[t-1]);   // Transition
         F.row(t).array() *= (wsaf_betabin_probs.row(t) * sampling_probs[t]).array(); // Emission
         scales(t) = F.row(t).sum();

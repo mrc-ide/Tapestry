@@ -63,3 +63,32 @@ MatrixXd calc_sampling_probs(
 
 }
 
+
+vector<MatrixXd> create_sampling_probs(
+        const ArrayXd& plafs,
+        const MatrixXi& allele_configs,
+        const vector<vector<vector<int>>>& ibd_states  // TODO: we pass from new class
+        )
+{   
+    
+    // Initialise
+    int n_sites = plafs.size();
+    vector<MatrixXd> sampling_probs(
+        n_sites,
+        MatrixXd::Constant(allele_configs.rows(), ibd_states.size(), -1.0)
+    );
+
+    // Compute
+    for (int i = 0; i < n_sites; ++i) {
+        // TODO: 
+        // - This is a copy step, which is bad
+        // - Better to use references to avoid
+        sampling_probs[i] = calc_sampling_probs(
+            plafs(i),
+            allele_configs,
+            ibd_states
+        );
+    }
+
+    return sampling_probs;
+}
