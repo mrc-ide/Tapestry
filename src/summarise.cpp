@@ -201,13 +201,13 @@ namespace ModelFit {
 
     void Summariser::write_ibd_profiles(const std::string& output_dir)
     {
-        // std::string viterbi_csv = output_dir + "/fit.ibd.path.csv";
-        // write_data_with_annotation(
-        //     viterbi_csv,
-        //     data,
-        //     ibd_states,
-        //     vector<string>{"ibd_viterbi"}
-        // );
+        std::string viterbi_csv = output_dir + "/fit.ibd.path.csv";
+        write_data_with_annotation(
+            viterbi_csv,
+            data,
+            ibd_states,
+            vector<string>{"ibd_viterbi"}
+        );
 
         std::string pairwise_csv = output_dir + "/fit.ibd.pairwise.csv";
         write_data_with_annotation(

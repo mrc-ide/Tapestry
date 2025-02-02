@@ -62,6 +62,7 @@ set(SOURCES
     src/parameters.cpp
     src/particle_writers.cpp
     src/particles.cpp
+    src/phase.cpp
     src/proposals.cpp
     src/sampling.cpp
     src/vcf.cpp

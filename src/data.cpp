@@ -150,3 +150,41 @@ void VCFData::print() const
     cout << "    PLAFs: " << plafs(0) << " ... " << plafs(n_sites - 1) << endl;
 }
 
+
+
+ArrayXd load_csv_as_double_array(const rapidcsv::Document& csv, const std::string& column_name)
+{
+    std::vector<double> v = csv.GetColumn<double>(column_name);
+    return Eigen::Map<ArrayXd>(v.data(), v.size());
+}
+
+ArrayXi load_csv_as_int_array(const rapidcsv::Document& csv, const std::string& column_name)
+{
+    std::vector<int> v = csv.GetColumn<int>(column_name);
+    return Eigen::Map<ArrayXi>(v.data(), v.size());
+}
+
+
+InferredIBDPathData::InferredIBDPathData(const string& csv_path)
+    : 
+    csv_path(csv_path),
+    csv(csv_path),
+    chrom_names(csv.GetColumn<std::string>("chrom")),
+    pos(load_csv_as_int_array(csv, "pos")),
+    refs(load_csv_as_int_array(csv, "refs")),
+    alts(load_csv_as_int_array(csv, "alts")),
+    plafs(load_csv_as_double_array(csv, "plafs")),
+    ibd_path(load_csv_as_int_array(csv, "ibd_viterbi")),
+    n_sites(chrom_names.size())
+{}
+
+void InferredIBDPathData::print() const
+{   
+    cout << "Loaded IBD path data" << endl;
+    cout << "  Chromosomes: " << chrom_names[0] << " ... " << chrom_names[n_sites - 1] << endl;
+    cout << "  Positions: " << pos(0) << " ... " << pos(n_sites - 1) << endl;
+    cout << "  REFs: " << refs(0) << " ... " << refs(n_sites - 1) << endl;
+    cout << "  ALTs: " << alts(0) << " ... " << alts(n_sites - 1) << endl;
+    cout << "  PLAFs: " << plafs(0) << " ... " << plafs(n_sites - 1) << endl;
+    cout << "  IBD path: " << ibd_path(0) << " ... " << ibd_path(n_sites - 1) << endl;
+}

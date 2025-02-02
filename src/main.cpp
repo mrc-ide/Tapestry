@@ -15,8 +15,10 @@
 #include "parameters.hpp"
 #include "particle_writers.hpp"
 #include "particles.hpp"
+#include "phase.hpp"
 #include "proposals.hpp"
 #include "timer.hpp"
+using Eigen::RowVectorXd;  // TODO: I probably want RowVector
 
 
 int main(int argc, char* argv[])
@@ -107,18 +109,13 @@ int main(int argc, char* argv[])
                 ->check(CLI::PositiveNumber);
 
     // Phase
-    cmd_phase->add_option("-i,--input_vcf", input_vcf, "Path to input VCF file.")
-                ->group("Input and output")
-                ->check(CLI::ExistingFile)
-                ->required();
-    cmd_phase->add_option("-s,--target_sample", sample_name, "Target sample in VCF.")
+    cmd_phase->add_option("-o,--output_dir", output_dir, "Output directory from `tapestry infer`.")
                 ->group("Input and output")
                 ->required();
-    cmd_phase->add_option("-o,--output_dir", output_dir, "Output directory.")
-                ->group("Input and output");
-    cmd_phase->add_option("-K, --coi", K, "Inferred COI value at which to conduct phasing.")
+    cmd_phase->add_option("-K, --coi", K, "Inferred COI value for which to phase.")
                 ->group("Model Hyperparameters")
-                ->check(CLI::Range(1, 9));
+                ->check(CLI::Range(1, 9))
+                ->required();
     cmd_phase->add_option("-e, --error_ref", e_0, "Probability of REF->ALT error.")
                 ->group("Model Hyperparameters")
                 ->check(CLI::Range(0, 1));
@@ -215,35 +212,27 @@ int main(int argc, char* argv[])
         std::cout << "Tapestry: Phasing genomes after inference" << std::endl;
         std::cout << std::string(80, '-') << std::endl;
 
-        // // Load data
-        // VCFData data(input_vcf, sample_name);
-        // data.print();
+        std::cout << "Phasing under K = " << K << std::endl;
+        std::string K_string = "K" + std::to_string(K);
+        std::string K_output_dir = output_dir + "/" + K_string;
 
-        // // Make beta-binomial array
-        // BetabinomialArray betabin_lookup(data, n_pi_bins, e_0, e_1, v, false);
+        InferredIBDPathData data(K_output_dir + "/fit.ibd.path.csv");
+        data.print();
 
-        // std::cout << "Phasing under K = " << k << std::endl;
-        // std::string K_string = "K" + std::to_string(k);
-        // std::string K_output_dir = output_dir + "/" + K_string;
+        // Load sample statistics
+        ModelFit::SampleStatistics sample_stats = ModelFit::load_statistics_from_json(
+            K_output_dir + "/fit.sample_stats.json"
+        );
+        RowVectorXd ws = Eigen::Map<ArrayXd>(sample_stats.ws.data(), sample_stats.ws.size());
 
-        // // Load sample statistics
-        // SampleStatistics sample_stats = ModelFit::load_statistics_from_json(
-        //     K_output_dir + "fit.sample_stats.json"
-        // );
-
-        // // Load IBD states profile
-        // // - Need to load this anyways
-        // // - Might as well write a parser for the whole thing?
-        // //VectorXd
-
-        // GenomePhaser phaser(
-        //     sample_stats.K,
-        //     sample_stats.ws,
-        //     e_0, e_1, v
-        // );
-
-
-        // std::cout << "Done. Results are here: " << output_dir << std::endl;
+        PanelFreePhaser phaser(
+            K, ws, data,
+            e_0, e_1, v
+        );
+        phaser.phase();
+        phaser.write_output(K_output_dir);
+        
+        std::cout << "Done. Results are here: " << K_output_dir << std::endl;
     }
 
     double total_elapsed = timer_total.elapsed<chrono::milliseconds>();

@@ -3,6 +3,7 @@
 #include <vector>
 #include "htslib/vcf.h"
 #include "libs/eigen-3.4.0/Dense"
+#include "libs/rapidcsv.h"
 #include "typedefs.hpp"
 using namespace std;
 
@@ -60,3 +61,27 @@ public:
     void print() const;
 };
 
+
+
+// Sure, I could use a template, but I only need these two types setups.
+ArrayXd load_csv_as_double_array(const rapidcsv::Document& csv, const std::string& column_name);
+ArrayXi load_csv_as_int_array(const rapidcsv::Document& csv, const std::string& column_name);
+
+
+class InferredIBDPathData
+{
+private:
+    const string& csv_path;             // Path to CSV file
+    rapidcsv::Document csv;
+public:
+    std::vector<string> chrom_names;
+    ArrayXi pos;
+    ArrayXi refs;                       // Read counts of REF allele
+    ArrayXi alts;                       // Read counts of ALT allele
+    ArrayXd plafs;                      // Population-level allele frequencies
+    ArrayXi ibd_path;                   // IBD state path
+    int n_sites;
+
+    InferredIBDPathData(const string& csv_path);
+    void print() const;
+};

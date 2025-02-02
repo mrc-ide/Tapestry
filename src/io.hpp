@@ -70,3 +70,58 @@ void write_data_with_annotation(
     csv_file.close();
 }
 
+// TODO: Needs to be refactored with above as a single template
+template<typename Derived>
+void write_data_with_annotation(
+    std::string output_csv,
+    const InferredIBDPathData& data,
+    const MatrixBase<Derived>& annotation_matrix,
+    const vector<string>& annotation_columns
+)
+{
+    // Check shapes match
+    if (annotation_matrix.rows() != data.n_sites) {
+        throw std::invalid_argument("Annotation matrix has incorrect number of rows.");
+    }
+    
+    // Open the output file
+    std::ofstream csv_file(output_csv);
+    if (!csv_file.is_open()) {
+        throw std::invalid_argument("Could not open output file.");
+    }
+
+    // Write column names
+    csv_file << "chrom,pos,refs,alts,plafs";
+    for (const string& col_name : annotation_columns) {
+        csv_file << "," << col_name;
+    }
+    csv_file << "\n";
+
+    // Format outputs
+    // See: https://eigen.tuxfamily.org/dox/structEigen_1_1IOFormat.html
+    const static Eigen::IOFormat CSVFormat(
+        5,
+        Eigen::DontAlignCols,
+        ", ", 
+        "\n",
+        "",
+        "\n"
+        );
+
+    // Write data
+    for (int i = 0; i < data.n_sites; ++i) {
+        csv_file << data.chrom_names[i] << ",";
+        csv_file << data.pos(i) << ",";
+        csv_file << data.refs(i) << ",";
+        csv_file << data.alts(i) << ",";
+        //csv_file << data.wsafs(i) << ",";
+        csv_file << data.plafs(i) << ",";
+        // TODO:
+        // Need to check that the row length is non-zero;
+        // If zero, add '\n'
+        // Alternatively, change formatting above and always add "\n"
+        csv_file << annotation_matrix.row(i).format(CSVFormat);
+    }
+
+    csv_file.close();
+}
