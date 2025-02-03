@@ -48,7 +48,7 @@ int main(int argc, char* argv[])
     
     // MCMC parameters
     int n_burn_iters = 100;              // Number of iterations in burn-in phase
-    int n_sample_iters = 900;            // Number of iterations in sampling phase
+    int n_sample_iters = 1000;            // Number of iterations in sampling phase
     int n_temps = 5;                     // Number of temperature levels for PT-MCMC
     double target_acceptance = 0.44;     // Target acceptance rate per MCMC rung
     int swap_freq = 1;                   // Number of iterations between proposing Metropolis-coupling swaps
