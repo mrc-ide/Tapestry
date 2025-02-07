@@ -57,6 +57,8 @@ set(SOURCES
     src/ibd.cpp
     src/io.cpp
     src/mcmcs.cpp
+    src/label_switching.cpp
+    src/mcmc_diags.cpp
     src/summarise.cpp
     src/models.cpp
     src/parameters.cpp

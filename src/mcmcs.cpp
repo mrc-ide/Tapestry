@@ -8,6 +8,8 @@
 #include <random>
 #include <vector>
 #include "mcmcs.hpp"
+#include "label_switching.hpp"
+#include "mcmc_diags.hpp"
 #include "models.hpp"
 #include "proposals.hpp"
 #include "particles.hpp"
@@ -82,6 +84,8 @@ void MCMC::run()
 {
     run_burn();
     run_sampling();
+    solve_label_switching();
+    calc_diagnostics();
 }
 
 void MCMC::run_burn()
@@ -193,6 +197,16 @@ void MCMC::run_iterations(int n, bool adaptive_on)
     }
 }
 
+void MCMC::solve_label_switching()
+{
+    label_switching labels;
+    labels.fix_labels(particle_trace);
+}
+
+void MCMC::calc_diagnostics()
+{
+    diags.calc_diagnostics(particle_trace, n_burn_iters);
+}
 
 void MCMC::write_output(
     const string& output_dir, 
@@ -204,22 +218,31 @@ void MCMC::write_output(
     
     // Prepare file paths
     std::string mcmc_csv = output_dir + "/mcmc.trace.csv";
+    std::string diagnostics_csv = output_dir + "/mcmc.diagnostics.csv";
     std::string particles_csv = output_dir + "/mcmc.parameters.csv";
 
-    // Write MCMC diagnostics
-    std::ofstream csv_file(mcmc_csv);
-    if (!csv_file.is_open()) {
+    // Write MCMC likelihoods etc. per iteration
+    std::ofstream mcmc_csv_file(mcmc_csv);
+    if (!mcmc_csv_file.is_open()) {
         throw std::invalid_argument("Could not open output file.");
     }
-    csv_file << "iter,phase,loglike,logprior,acceptance_rate\n";
+    mcmc_csv_file << "iter,phase,loglike,logprior,acceptance_rate\n";
     for (int i = 0; i < ix; ++i) {
-        csv_file << i << ",";
-        csv_file << (i < n_burn_iters ? "burn" : "sample") << ","; 
-        csv_file << loglike_trace[i] << ",";
-        csv_file << logprior_trace[i] << ",";
-        csv_file << acceptance_trace[i] << "\n";
+        mcmc_csv_file << i << ",";
+        mcmc_csv_file << (i < n_burn_iters ? "burn" : "sample") << ","; 
+        mcmc_csv_file << loglike_trace[i] << ",";
+        mcmc_csv_file << logprior_trace[i] << ",";
+        mcmc_csv_file << acceptance_trace[i] << "\n";
     }
-    csv_file.close();
+    mcmc_csv_file.close();
+
+    // Write MCMC diagnostics
+    std::ofstream diagnostics_csv_file(diagnostics_csv);
+    if (!diagnostics_csv_file.is_open()) {
+        throw std::invalid_argument("Could not open output file.");
+    }
+    diags.write_diagnostics(diagnostics_csv_file);
+    diagnostics_csv_file.close();
 
     // Write MCMC particles
     particle_writer.write_particle_trace(

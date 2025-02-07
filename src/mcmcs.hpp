@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 #include "models.hpp"
+#include "mcmc_diags.hpp"
 #include "proposals.hpp"
 #include "particles.hpp"
 #include "particle_writers.hpp"
@@ -48,6 +49,8 @@ private:
     void run_iterations(int n, bool adaptive_on = false);
     void run_burn();
     void run_sampling();
+    void solve_label_switching();
+    void calc_diagnostics();
 
 public:
     // MEMBERS
@@ -74,11 +77,13 @@ public:
     std::vector<TemperatureLevel> temps;  // Temperature information
     MatrixXd loglikelihoods;              // Loglikelihoods; for TI; TODO: should be array? Probably, see ModelEvidence 104-106
 
-    //  Recording swaps
+    // Recording swaps
     int n_swap_attempts;                  // No. swap attempts; same for all pairs of rungs
     ArrayXd swap_rate_cumul;              // Cumulative swap rate for each pair, up to current `ix`
     MatrixXd swap_rates;                  // Rate of swapping for each pair of rungs
     
+    // Calculate and store diagnostics in separate class
+    MCMC_diags diags;
 
     // FUNCTIONS
     // Constructor
